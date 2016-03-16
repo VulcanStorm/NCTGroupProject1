@@ -14,6 +14,7 @@ public class jamestest1 : MonoBehaviour {
 	}
 	
 <<<<<<< HEAD
+<<<<<<< HEAD
 	//dear github; changes made 
 =======
 	
@@ -24,4 +25,7 @@ public class jamestest1 : MonoBehaviour {
 	//CAN'T YOU SEE THEM??
 	//CHANGES!!!!!
 >>>>>>> refs/remotes/origin/Development
+=======
+	//dear github; changes made mhm yes many
+>>>>>>> origin/DevelopmentClone
 }
