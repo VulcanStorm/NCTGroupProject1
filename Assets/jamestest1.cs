@@ -12,4 +12,6 @@ public class jamestest1 : MonoBehaviour {
 	void Update () {
 	
 	}
+	
+	//dear github; changes made 
 }
