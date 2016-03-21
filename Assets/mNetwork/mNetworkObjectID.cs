@@ -13,7 +13,7 @@ public class mNetworkObjectID: MonoBehaviour {
 	
 	// for use later, to determine which objects are in the scene
 	//public mNetworkIDType idType = mNetworkIDType.Game;
-	[System.NonSerialized]
+	[HideInInspector]
 	public bool hasAllocatedID = false;
 	public bool autoAllocateID = true;
 	static bool hasResetIds = false;
