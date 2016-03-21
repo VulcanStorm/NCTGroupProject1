@@ -37,7 +37,13 @@ public static class mNetwork {
 	public static mNetworkConnection[] connections;
 	
 	// have we already setup the network
-	static bool hasSetupNetworkTransport = false;
+	public static bool isStarted{
+		get{
+			return hasSetupNetworkTransport;
+		}
+	}
+
+	private static bool hasSetupNetworkTransport = false;
 	
 	// id for the network component
 	// this is an internal ID used so that any network messages sent via this,
@@ -45,7 +51,7 @@ public static class mNetwork {
 	public static readonly mNetworkID internalNetID = new mNetworkID(0,mNetworkIDType.Scene);
 	
 	public static void StartmNetwork () {
-		if(NetworkTransport.IsStarted == true){
+		if(isStarted == true){
 			return;
 		}
 		
@@ -358,15 +364,12 @@ public static class mNetwork {
 			
 		}
 	}
-	
-	
-	public static void Update () {
-	Debug.Log("update");
-		PollNetworkEvents();
-	}
+
 	
 	public static void PollNetworkEvents() {
-		
+		if (isStarted == false) {
+			return;
+		}
 		bool hasNetworkEvent = true;
 		
 		while(hasNetworkEvent == true){

@@ -22,13 +22,18 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	}
 	
 	void OnGUI () {
-		if(mNetwork.connections.Length != 0 && mNetwork.connections != null){
-			connectionId = Mathf.Clamp(connectionId,0,mNetwork.connections.Length-1);
-			GUI.Label(ipRect,mNetwork.connections[connectionId].ipAddress);
-			GUI.Label(portRect,mNetwork.connections[connectionId].port.ToString());
-			GUI.Label(socketRect,"Socket:"+mNetwork.connections[connectionId].socketID);
-			GUI.Label(connectionRect, "Con ID:"+mNetwork.connections[connectionId].connectionID);
-			GUI.Label(activeRect, "Active?:"+mNetwork.connections[connectionId].isActive);
+
+		if(mNetwork.connections != null){
+			//if(mNetwork.connections.Length != 0){
+				for(int i=0;i<mNetwork.connections.Length;i++){
+					connectionId = Mathf.Clamp(connectionId,0,mNetwork.connections.Length-1);
+					GUI.Label(ipRect,mNetwork.connections[connectionId].ipAddress);
+					GUI.Label(portRect,mNetwork.connections[connectionId].port.ToString());
+					GUI.Label(socketRect,"Socket:"+mNetwork.connections[connectionId].socketID);
+					GUI.Label(connectionRect, "Con ID:"+mNetwork.connections[connectionId].connectionID);
+					GUI.Label(activeRect, "Active?:"+mNetwork.connections[connectionId].isActive);
+				}
+			//}
 		}
 	}
 }
