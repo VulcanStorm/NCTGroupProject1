@@ -11,22 +11,22 @@ public static class mNetwork {
 	
 	// Network configuration variables
 	static ConnectionConfig config;
-	
+
 	// integers to hold the channel IDs
-	static int reliableChannelId = -9;
-	static int unreliableChannelId = -9;
-	static int stateUpdateChannelId = -9;
-	static int seqReliableChannelId = -9;
+	public static int reliableChannelId = -9;
+	public static int unreliableChannelId = -9;
+	public static int stateUpdateChannelId = -9;
+	public static int seqReliableChannelId = -9;
 	
 	// integers to hold the socket info
-	static int serverSocketId = -9;
-	static int clientSocketId = -9;
-	static ushort socketPort = 25001;
+	public static int serverSocketId = -9;
+	public static int clientSocketId = -9;
+	public static ushort socketPort = 25001;
 	
 	// how many connections are allowed
 	public static int maxConnections = -9;
 	// the id of the current client connection
-	static int clientConnectionId = -9;
+	public static int clientConnectionId = -9;
 	
 	// what kind of network peer are we
 	public static mNetworkPeerType peerType = mNetworkPeerType.none;
@@ -178,6 +178,7 @@ public static class mNetwork {
 			byte error;
 			// set the network state
 			networkState = mNetworkState.connecting;
+			Debug.Log ("client id:"+clientConnectionId);
 			// attempt connection and get the ID of that connection
 			clientConnectionId = NetworkTransport.Connect(clientSocketId, destinationIP, destinationPort,0,out error);
 
@@ -186,6 +187,7 @@ public static class mNetwork {
 			}
 			else{
 				Debug.Log("Connection Message Sent");
+				Debug.Log ("client id:"+clientConnectionId);
 			}
 		}
 	}
@@ -215,7 +217,7 @@ public static class mNetwork {
 		NetworkTransport.GetConnectionInfo(socketID,conId,out cnAddress,out cnPort, out cnNetwork, out cnDstNode, out cnError);
 		
 		// check for an error
-		if(!CheckForNetworkError(cnError)){
+		if(CheckForNetworkError(cnError)){
 			Debug.LogError("Could not get connection info.");
 		}
 		else{
@@ -257,7 +259,8 @@ public static class mNetwork {
 	// <----------------------------------------------------------------------------------------------------->
 	
 	// <----------------------------------------------------------------------------------------------------->
-	public static void SendRPCMessage (ref mNetworkRPCMessage dataToSend){
+
+	private static void RPCNow (ref mNetworkRPCMessage_ND _dataToSend){
 		// check if the network has been started
 		if(!(networkState == mNetworkState.connected)){
 			// TODO CHANGE THIS
@@ -268,7 +271,7 @@ public static class mNetwork {
 			using(Stream stream = new MemoryStream(localbuffer)){
 				
 				BinaryFormatter formatter = new BinaryFormatter();
-				formatter.Serialize(stream,dataToSend);
+				formatter.Serialize(stream,_dataToSend);
 				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer);
 			}
 			return;
@@ -280,12 +283,13 @@ public static class mNetwork {
 		using(Stream stream = new MemoryStream(buffer)){
 			
 			BinaryFormatter formatter = new BinaryFormatter();
-			formatter.Serialize(stream,dataToSend);
+			formatter.Serialize(stream,_dataToSend);
 			
-			int bufferSize = 1024;
-			
-			NetworkTransport.Send(serverSocketId,clientConnectionId,reliableChannelId,buffer,bufferSize,out error);
-			
+		}
+
+		int bufferSize = 1024;
+		if (mNetwork.peerType == mNetworkPeerType.client) {
+			NetworkTransport.Send (clientSocketId, clientConnectionId, reliableChannelId, buffer, bufferSize, out error);
 		}
 	}
 	
@@ -294,8 +298,9 @@ public static class mNetwork {
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netId,_methodId,args);
-		
-		// check if the network has been started
+
+		RPCNow (ref dataToSend);
+		/*// check if the network has been started
 		if(!(networkState == mNetworkState.connected)){
 			// TODO CHANGE THIS
 			//Debug.LogError("No RPC could be sent, since we are not connected");
@@ -323,7 +328,7 @@ public static class mNetwork {
 			
 			NetworkTransport.Send(serverSocketId,clientConnectionId,reliableChannelId,buffer,bufferSize,out error);
 			
-		}
+		}*/
 	}
 	
 	public static void SendRPCMessage (mNetworkID _netId, string _methodName, params object[] args){
@@ -333,8 +338,9 @@ public static class mNetwork {
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netId,_methodId,args);
-		
-		// check if the network has been started
+		RPCNow (ref dataToSend);
+
+		/*// check if the network has been started
 		if(!(networkState == mNetworkState.connected)){
 			// TODO CHANGE THIS
 			//Debug.LogError("No RPC could be sent, since we are not connected");
@@ -358,11 +364,12 @@ public static class mNetwork {
 			BinaryFormatter formatter = new BinaryFormatter();
 			formatter.Serialize(stream,dataToSend);
 			
-			int bufferSize = 1024;
-			
-			NetworkTransport.Send(serverSocketId,clientConnectionId,reliableChannelId,buffer,bufferSize,out error);
-			
 		}
+		int bufferSize = 1024;
+		if (mNetwork.peerType == mNetworkPeerType.client) {
+			NetworkTransport.Send (clientSocketId, clientConnectionId, reliableChannelId, buffer, bufferSize, out error);
+		}*/
+		 
 	}
 
 	
@@ -370,6 +377,7 @@ public static class mNetwork {
 		if (isStarted == false) {
 			return;
 		}
+		//Debug.Log ("PollNetworkEvents called");
 		bool hasNetworkEvent = true;
 		
 		while(hasNetworkEvent == true){
@@ -421,7 +429,7 @@ public static class mNetwork {
 					break;
 					
 				case NetworkEventType.DataEvent:
-					// WOOT! WE GOT DATA!
+					Debug.Log ("WOOT! WE GOT DATA!");
 					
 					// send the network manager the data to process
 					mNetworkManager.ProcessNonDelegateRPC(ref recBuffer);
@@ -473,6 +481,16 @@ public static class mNetwork {
 	
 		if(err != NetworkError.Ok){
 			Debug.LogError("Network Error Detected: "+err);
+
+			if(networkState == mNetworkState.connecting){
+				networkState = mNetworkState.disconnected;
+				Debug.Log ("client id:"+clientConnectionId);
+
+			}
+
+			else if (networkState == mNetworkState.connected && err == NetworkError.Timeout){
+				networkState = mNetworkState.disconnected;
+			}
 			return true;
 		}
 		else{

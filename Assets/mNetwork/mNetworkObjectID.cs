@@ -83,7 +83,8 @@ public class mNetworkObjectID: MonoBehaviour {
 		Debug.Log ("delegate");
 		ushort methodId = (ushort)RPCStore.GetIDForRPCName(methodName);
 		mNetworkRPCMessage rpcData = new mNetworkRPCMessage(id,methodId,data);
-		mNetwork.SendRPCMessage(ref rpcData);
+		Debug.LogError ("Delegate RPCs have been removed, this message will not send");
+		//mNetwork.SendRPCMessage(ref rpcData);
 	}
 	public void SendRPC (string methodName, params object[] arguments){
 		Debug.Log ("non delegate");
