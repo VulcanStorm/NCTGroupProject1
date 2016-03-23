@@ -35,7 +35,8 @@ public static class mNetwork {
 	
 	// an array to hold all of the connection info
 	public static mNetworkConnection[] connections;
-	
+	// an array of netowrk players to send RPCs to
+	public static mNetworkPlayer[] networkPlayers;
 	// have we already setup the network
 	public static bool isStarted{
 		get{
@@ -49,7 +50,9 @@ public static class mNetwork {
 	// this is an internal ID used so that any network messages sent via this,
 	// are sent straight to the network manager.
 	public static readonly mNetworkID internalNetID = new mNetworkID(0,mNetworkIDType.Scene);
-	
+
+	#region NETWORK SETUP
+
 	public static void StartmNetwork () {
 		if(isStarted == true){
 			return;
@@ -171,7 +174,23 @@ public static class mNetwork {
 			connections = new mNetworkConnection[maxConnections];
 			
 	}
-	
+
+	#endregion
+
+	#region NETWORK PLAYER ARRAY SYNCHRONISING
+		
+	[mNetworkRPC]
+	private static void SetFullNetworkPlayerArray (mNetworkPlayer[] ary){
+		networkPlayers = (mNetworkPlayer[])ary.Clone ();
+	}
+
+	[mNetworkRPC]
+	private static void UpdateSingleNetworkPlayerInArray (int index, mNetworkPlayer _pl){
+		networkPlayers [index] = _pl;
+	}
+		
+	#endregion
+
 	public static void Connect (string destinationIP, int destinationPort) {
 		if(networkState == mNetworkState.disconnected){
 			// setup a variable to hold the error
@@ -252,13 +271,11 @@ public static class mNetwork {
 	}
 	
 	[mNetworkRPC]
-	public static void LolRPC (int conID){
+	private static void LolRPC (int conID){
 		Debug.Log("OMFG LOL " + conID);
 	}
 	
-	// <----------------------------------------------------------------------------------------------------->
-	
-	// <----------------------------------------------------------------------------------------------------->
+	#region RPC SENDING
 
 	private static void RPCNow (ref mNetworkRPCMessage_ND _dataToSend){
 		// check if the network has been started
@@ -372,6 +389,7 @@ public static class mNetwork {
 		 
 	}
 
+	#endregion
 	
 	public static void PollNetworkEvents() {
 		if (isStarted == false) {
@@ -394,7 +412,21 @@ public static class mNetwork {
 			NetworkEventType recNetworkEvent = NetworkTransport.Receive(out recSocketId, out recConnectionId, 
 			                                                            out recChannelId, recBuffer, bufferSize,out dataSize, out error);
 			// check for an error
-			if(CheckForNetworkError(error) == false){
+			if(CheckForNetworkError(error)){
+				NetworkError err = (NetworkError)error;
+				Debug.Log ("<<<Error Details>>>");
+				Debug.Log ("socketID:"+recSocketId);
+				Debug.Log ("connectionId:"+recConnectionId);
+				Debug.Log ("channelId:"+recChannelId);
+				Debug.Log ("<<<End Of Error Details>>>");
+				switch(err){
+				case NetworkError.Timeout:
+					// remove the connection
+					RemoveNetworkConnection(recConnectionId);
+					break;
+				}
+			}
+			else{
 				// determine what happened
 				switch(recNetworkEvent){
 				case NetworkEventType.Nothing:
@@ -418,6 +450,8 @@ public static class mNetwork {
 					if(recSocketId == serverSocketId){
 						Debug.Log ("Server: Player " + recConnectionId.ToString() + " connected!");
 						networkState = mNetworkState.connected;
+						// send the network player array to the new client]
+						// update all clients with the new player
 					}
 					// this is our client who connected
 					if(recSocketId == clientSocketId){

@@ -260,7 +260,9 @@ public static class mNetworkManager{
 			Debug.LogException(e);
 		}
 	}
-	
+
+	#region RPC PROCESSING
+
 	public static void ProcessNonDelegateRPC(ref byte[] rawData){
 		
 		try{
@@ -286,7 +288,7 @@ public static class mNetworkManager{
 						isInternalRPC = true;
 					}
 					else{
-					netScript = sceneNetworkIDs[msg.targetNetId].targetObject.GetComponent(classType) as mNetworkBehaviour;
+						netScript = sceneNetworkIDs[msg.targetNetId].targetObject.GetComponent(classType) as mNetworkBehaviour;
 					}
 				}
 				
@@ -314,5 +316,7 @@ public static class mNetworkManager{
 			Debug.LogException(e);
 		}
 	}
+
+	#endregion
 	
 }
