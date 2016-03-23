@@ -5,6 +5,7 @@ using System.Collections;
 public class mNetworkRPCMessage_ND {
 
 	public ushort targetNetId;
+	public mNetworkPlayer networkPlayer
 	public mNetworkIDType targetIdType;
 	public ushort targetMethodId;
 	public object[] data;
