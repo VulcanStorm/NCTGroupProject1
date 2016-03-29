@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
-
+using mNetworkLibrary;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(mNetworkObjectID))]

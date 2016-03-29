@@ -7,6 +7,8 @@ public enum mNetworkIDType :byte {
 	Game
 }
 
+namespace mNetworkLibrary{
+
 [DisallowMultipleComponent]
 [ExecuteInEditMode]
 public class mNetworkObjectID: MonoBehaviour {
@@ -79,17 +81,23 @@ public class mNetworkObjectID: MonoBehaviour {
 		}
 	}
 	
-	public void SendRPC (string methodName, byte[] data){
+	/*public void SendRPC (string methodName, byte[] data){
 		Debug.Log ("delegate");
 		ushort methodId = (ushort)RPCStore.GetIDForRPCName(methodName);
 		mNetworkRPCMessage rpcData = new mNetworkRPCMessage(id,methodId,data);
 		Debug.LogError ("Delegate RPCs have been removed, this message will not send");
 		//mNetwork.SendRPCMessage(ref rpcData);
+	}*/
+
+	public void SendRPC (string methodName, mNetworkPlayer targetPlayer, int channel, params object[] arguments){
+		Debug.Log("sending RPC objectId");
+		mNetwork.SendRPCMessage(methodName,id,targetPlayer,channel,arguments);
 	}
-	public void SendRPC (string methodName, params object[] arguments){
-		Debug.Log ("non delegate");
-		ushort methodId = (ushort)RPCStore.GetIDForRPCName_ND(methodName);
-		mNetwork.SendRPCMessage(id,methodId,arguments);
-		
+
+	public void SendRPC (string methodName, mNetworkRPCMode rpcMode, int channel, params object[] arguments){
+		Debug.Log("sending RPC objectId");
+		mNetwork.SendRPCMessage(methodName,id,rpcMode,channel,arguments);
 	}
+}
+
 }
