@@ -212,12 +212,16 @@ public static class mNetwork {
 	}
 	
 	public static void Disconnect () {
-		Debug.Log("Disconnecting...");
+		
 		if(networkState == mNetworkState.connected){
+			Debug.Log("Disconnecting...");
 			byte error;
 			NetworkTransport.Disconnect(serverSocketId,clientConnectionId,out error);
 			CheckForNetworkError(error);
 			networkState = mNetworkState.disconnected;
+		}
+		else{
+			Debug.LogError("Cannot disconnect since no connection was started");
 		}
 	}
 	
