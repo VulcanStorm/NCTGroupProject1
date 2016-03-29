@@ -6,17 +6,22 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	Rect conRect = new Rect(0,0,150,25);
 	
 	public int connectionId;
-	
-	Rect ipRect = new Rect(0,0,150,25);
-	Rect portRect = new Rect(0,0,50,25);
-	Rect socketRect = new Rect(0,20,150,25);
-	Rect connectionRect = new Rect(0,40,150,25);
-	Rect activeRect = new Rect(0,60,150,25);
-	Rect serverIdRect = new Rect (0, 0, 100, 25);
-	Rect clientSocketIdRect = new Rect (0, 25, 100, 25);
-	Rect clientConnectionIdRect = new Rect (0, 50, 100, 25);
-	Rect peerTypeRect = new Rect (0, 75, 150, 25);
+
+	// connection rects
+	Rect ipRect = new Rect(0,125,150,25);
+	Rect portRect = new Rect(0,125,50,25);
+	Rect socketRect = new Rect(0,145,150,25);
+	Rect connectionRect = new Rect(0,165,150,25);
+	Rect activeRect = new Rect(0,185,150,25);
 	Rect drawRect;
+
+	// socket info rects
+	Rect mySocketInfoRect = new Rect(0,0,100,100);
+	Rect serverIdRect = new Rect (0, 20, 100, 100);
+	Rect clientSocketIdRect = new Rect (0, 40, 100, 25);
+	Rect clientConnectionIdRect = new Rect (0, 60, 100, 25);
+	Rect peerTypeRect = new Rect (0, 80, 150, 25);
+
 	void Start () {
 		// network connection draw rect
 		ipRect.x = Screen.width - 200;
@@ -25,18 +30,19 @@ public class mNetworkViewerGUI : MonoBehaviour {
 		connectionRect.x = Screen.width - 150;
 		activeRect.x = Screen.width - 150;
 		// network info draw rects
-		serverIdRect.x = Screen.width - 300;
-		clientSocketIdRect.x = Screen.width - 300;
-		clientConnectionIdRect.x = Screen.width - 300;
-		peerTypeRect.x = Screen.width - 300;
+		mySocketInfoRect.x = Screen.width - 100;
+		serverIdRect.x = Screen.width - 95;
+		clientSocketIdRect.x = Screen.width - 95;
+		clientConnectionIdRect.x = Screen.width - 95;
+		peerTypeRect.x = Screen.width - 95;
 	}
-	
-	void OnGUI () {
 
-		GUI.Box (serverIdRect,"sv socket:"+mNetwork.serverSocketId.ToString());
-		GUI.Box (clientSocketIdRect,"cl socket:"+mNetwork.clientSocketId.ToString ());
-		GUI.Box (clientConnectionIdRect,"cl conn:"+mNetwork.clientConnectionId.ToString ());
-		GUI.Box (peerTypeRect,mNetwork.peerType.ToString ());
+	void OnGUI () {
+		GUI.Box(mySocketInfoRect, "Socket Info:");
+		GUI.Label (serverIdRect,"sv socket:"+mNetwork.serverSocketId.ToString());
+		GUI.Label (clientSocketIdRect,"cl socket:"+mNetwork.clientSocketId.ToString ());
+		GUI.Label (clientConnectionIdRect,"cl conn:"+mNetwork.clientConnectionId.ToString ());
+		GUI.Label (peerTypeRect,mNetwork.peerType.ToString ());
 
 		if(mNetwork.connections != null){
 			//if(mNetwork.connections.Length != 0){

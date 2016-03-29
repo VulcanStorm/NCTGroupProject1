@@ -54,7 +54,7 @@ public static class RPCStore {
 			// iterate over the array of rpcs and populate the dictionary
 			for(int i=0;i<storedRPCs_ND.Length;i++){
 				lookupRPCNames_ND.Add(storedRPCs_ND[i].Name,i);
-				Debug.Log (storedRPCs_ND[i].Name);
+				Debug.Log ("Added RPC:"+storedRPCs_ND[i].Name);
 			}
 			Debug.Log ("Created non-delegate RPC Name Lookup Table");
 		}

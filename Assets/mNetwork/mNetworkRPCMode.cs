@@ -4,6 +4,5 @@ using System.Collections;
 public enum mNetworkRPCMode :byte {
 	all,
 	server,
-	others,
-	none
+	others
 }

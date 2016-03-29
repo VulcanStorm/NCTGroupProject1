@@ -180,7 +180,7 @@ public static class mNetwork {
 	#region NETWORK PLAYER ARRAY SYNCHRONISING
 		
 	[mNetworkRPC]
-	private static void SetFullNetworkPlayerArray (mNetworkPlayer[] ary){
+	static void SetFullNetworkPlayerArray (mNetworkPlayer[] ary){
 		networkPlayers = (mNetworkPlayer[])ary.Clone ();
 	}
 
@@ -310,44 +310,26 @@ public static class mNetwork {
 		}
 	}
 	
-	
-	public static void SendRPCMessage (mNetworkID _netId, ushort _methodId, object[] args){
+	/// <summary>
+	/// Send an RPC message to the server only.
+	/// </summary>
+	/// <param name="_netId">Net identifier.</param>
+	/// <param name="_methodId">Method identifier.</param>
+	/// <param name="args">Arguments.</param>
+	public static void SendRPCMessage (mNetworkID _netId, ushort _methodId, params object[] args){
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netId,_methodId,args);
 
 		RPCNow (ref dataToSend);
-		/*// check if the network has been started
-		if(!(networkState == mNetworkState.connected)){
-			// TODO CHANGE THIS
-			//Debug.LogError("No RPC could be sent, since we are not connected");
-			Debug.LogWarning("Not connected, so the RPC will only be local");
-			// send it locally instead
-			byte[] localbuffer = new byte[1024];
-			using(Stream stream = new MemoryStream(localbuffer)){
-				
-				BinaryFormatter formatter = new BinaryFormatter();
-				formatter.Serialize(stream,dataToSend);
-				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer);
-			}
-			return;
-		}
-		
-		byte error;
-		byte[] buffer = new byte[1024];
-		// using so the stream will be disposed of afterwards
-		using(Stream stream = new MemoryStream(buffer)){
-			
-			BinaryFormatter formatter = new BinaryFormatter();
-			formatter.Serialize(stream,dataToSend);
-			
-			int bufferSize = 1024;
-			
-			NetworkTransport.Send(serverSocketId,clientConnectionId,reliableChannelId,buffer,bufferSize,out error);
-			
-		}*/
 	}
-	
+
+	/// <summary>
+	/// Sends an RPC Message to the server only.
+	/// </summary>
+	/// <param name="_netId">Net identifier.</param>
+	/// <param name="_methodName">Method name.</param>
+	/// <param name="args">Arguments.</param>
 	public static void SendRPCMessage (mNetworkID _netId, string _methodName, params object[] args){
 		
 		// get the method ID for the name
@@ -356,37 +338,40 @@ public static class mNetwork {
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netId,_methodId,args);
 		RPCNow (ref dataToSend);
+	}
 
-		/*// check if the network has been started
-		if(!(networkState == mNetworkState.connected)){
-			// TODO CHANGE THIS
-			//Debug.LogError("No RPC could be sent, since we are not connected");
-			Debug.LogWarning("Not connected, so the RPC will only be local");
-			// send it locally instead
-			byte[] localbuffer = new byte[1024];
-			using(Stream stream = new MemoryStream(localbuffer)){
-				
-				BinaryFormatter formatter = new BinaryFormatter();
-				formatter.Serialize(stream,dataToSend);
-				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer);
-			}
-			return;
-		}
+	/// <summary>
+	/// Sends an RPC message to a specific group.
+	/// </summary>
+	/// <param name="_methodName">Method name.</param>
+	/// <param name="_netID">Net I.</param>
+	/// <param name="_mode">Mode.</param>
+	/// <param name="args">Arguments.</param>
+	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkRPCMode _mode, params object[] args){
+		// get the method ID for the name
+		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
-		byte error;
-		byte[] buffer = new byte[1024];
-		// using so the stream will be disposed of afterwards
-		using(Stream stream = new MemoryStream(buffer)){
-			
-			BinaryFormatter formatter = new BinaryFormatter();
-			formatter.Serialize(stream,dataToSend);
-			
-		}
-		int bufferSize = 1024;
-		if (mNetwork.peerType == mNetworkPeerType.client) {
-			NetworkTransport.Send (clientSocketId, clientConnectionId, reliableChannelId, buffer, bufferSize, out error);
-		}*/
-		 
+		// create the network message with the new formatted data
+		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,_mode, args);
+
+		RPCNow(ref dataToSend);
+	}
+
+	/// <summary>
+	/// Sends an RPC message to a specific player.
+	/// </summary>
+	/// <param name="_methodName">Method name.</param>
+	/// <param name="_netID">Net I.</param>
+	/// <param name="_targetPlayer">Target player.</param>
+	/// <param name="args">Arguments.</param>
+	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkPlayer _targetPlayer, params object[] args){
+		// get the method ID for the name
+		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
+		
+		// create the network message with the new formatted data
+		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,_targetPlayer, args);
+
+		RPCNow(ref dataToSend);
 	}
 
 	#endregion
