@@ -320,7 +320,7 @@ public static class mNetwork {
 	/// <summary>
 	/// Removes a network connection from the array.
 	/// </summary>
-	/// <returns>The index that the connection was removed from, or -1 if the connection was not removed.</returns>
+	/// <returns>The index that the connection was removed from, this is the player entry in the networkPlayers array. Or -1 if the connection was not removed.</returns>
 	/// <param name="conId">Connection identifier.</param>
 	static int RemoveNetworkConnection (int conId) {
 		int foundConNr = -1;
@@ -381,12 +381,12 @@ public static class mNetwork {
 		}
 
 		int bufferSize = 1024;
-		if (peerType == mNetworkPeerType.client || peerType == mNetworkPeerType.server) {
+		if (peerType != mNetworkPeerType.dedicatedServer) {
 			NetworkTransport.Send (clientSocketId, clientConnectionId, sendChannelID, buffer, bufferSize, out error);
 		}
 		// we're a dedicated server... shit...
 		// what to do...
-		else if(peerType == mNetworkPeerType.dedicatedServer){
+		else {
 			// we're a dedicated server... so relay this to the correct client since we can't send this to ourselves
 			mNetworkManager.ProcessNonDelegateRPC(ref buffer,serverSocketId,-1,sendChannelID);
 		}
@@ -535,11 +535,26 @@ public static class mNetwork {
 				Debug.Log ("<<<End Of Error Details>>>");
 				switch(err){
 				case NetworkError.Timeout:
-					// remove the connection
-					int removedConnectionID = RemoveNetworkConnection(recConnectionId);
-					// check if we're the server, because then we need to change the player array
-					if(recSocketId == serverSocketId){
-						// TODO send an RPC to everyone to clear the player from the array
+					// check if we are connected
+					if(networkState == mNetworkState.connected){
+						// remove the connection
+						int removedPlayerID = RemoveNetworkConnection(recConnectionId);
+						// check if we're the server, because then we need to change the player array
+						if(recSocketId == serverSocketId){
+							// this was effectively a disconnect event
+							if(removedPlayerID != -1){
+							// send an RPC to everyone to clear the player from the array
+							SendRPCMessage("UpdateSingleNetworkPlayerInArray",internalNetID,mNetworkRPCMode.All,seqReliableChannelId,removedPlayerID,new mNetworkPlayer());
+							}
+							else{
+								Debug.LogError("Failed to Remove Network Connection");
+							}
+						}
+					}
+					// check if we were connecting at the time, hence the connection failed
+					if(networkState == mNetworkState.connecting){
+						networkState = mNetworkState.disconnected;
+						Debug.Log ("client id:"+clientConnectionId);
 					}
 					break;
 				}
@@ -574,6 +589,7 @@ public static class mNetwork {
 						// send the network player array to the new client
 						sv_SendRPC("SetFullNetworkPlayerArray",internalNetID,recConnectionId,seqReliableChannelId,networkPlayers);
 						// update all clients with the new player
+						SendRPCMessage("UpdateSingleNetworkPlayerInArray",internalNetID,mNetworkRPCMode.All,seqReliableChannelId,newPlayerNum, networkPlayers[newPlayerNum]);
 					}
 					// this is our client who connected
 					// FORCE CLIENT ONLY, as a server also has a client socket ID:)
@@ -646,16 +662,6 @@ public static class mNetwork {
 	
 		if(err != NetworkError.Ok){
 			Debug.LogError("Network Error Detected: "+err);
-
-			if(networkState == mNetworkState.connecting){
-				networkState = mNetworkState.disconnected;
-				Debug.Log ("client id:"+clientConnectionId);
-
-			}
-
-			else if (networkState == mNetworkState.connected && err == NetworkError.Timeout){
-				networkState = mNetworkState.disconnected;
-			}
 			return true;
 		}
 		else{

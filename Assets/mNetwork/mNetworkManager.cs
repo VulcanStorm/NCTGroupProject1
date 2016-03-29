@@ -283,7 +283,7 @@ public static class mNetworkManager{
 				// check if it was recieved in the client socket
 				if(socketID == mNetwork.clientSocketId){
 					// process this like a client
-					cl_ProcessRPC_ND(msg);
+					local_ProcessRPC_ND(msg);
 				}
 				// check if it was recieved in the server socket
 				else if(socketID == mNetwork.serverSocketId){
@@ -293,7 +293,14 @@ public static class mNetworkManager{
 						// redistribute this message to everyone
 						Debug.Log("Redistributing message to all...");
 
-						for(int i=0;i<mNetwork.networkPlayers.Length;i++){
+						int i=0;
+						// check if we are a server, since we also posess a client
+						if(mNetwork.peerType == mNetworkPeerType.server){
+						// skip the first player, since this will always be our client
+							i = 1;
+						}
+
+						for(i=0;i<mNetwork.networkPlayers.Length;i++){
 							// check if the player is active
 							if(mNetwork.networkPlayers[i].isActive == true){
 							// get the connection ID
@@ -302,6 +309,10 @@ public static class mNetworkManager{
 							mNetwork.sv_RelayRPCToConnection(ref rawData,relayConID,channelID);
 							}
 						}
+
+						// if we're a dedicated server, we need this message too... since it won't be relayed to our client
+						// if we're a server, 
+						local_ProcessRPC_ND(msg);
 					break;
 					case mNetworkRPCMode.Server:
 						Debug.Log("Handling the message on server");
@@ -329,7 +340,7 @@ public static class mNetworkManager{
 	/// CLIENT. Processes an RPC message.
 	/// </summary>
 	/// <param name="_msg">Message.</param>
-	private static void cl_ProcessRPC_ND(mNetworkRPCMessage_ND _msg){
+	private static void local_ProcessRPC_ND(mNetworkRPCMessage_ND _msg){
 		// find the type of script that this method belongs to
 		System.Type classType = RPCStore.storedRPCs_ND[_msg.targetMethodId].DeclaringType;
 		Debug.Log ("Class of RPC being processed is "+classType);

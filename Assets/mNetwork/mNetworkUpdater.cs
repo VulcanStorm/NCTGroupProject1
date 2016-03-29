@@ -6,6 +6,7 @@ namespace mNetworkLibrary{
 public class mNetworkUpdater : MonoBehaviour {
 	
 	// Update is called once per frame
+	// TODO implement a send rate
 	void Update () {
 		mNetwork.PollNetworkEvents ();
 	}
