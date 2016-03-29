@@ -294,18 +294,27 @@ public static class mNetworkManager{
 						Debug.Log("Redistributing message to all...");
 
 						for(int i=0;i<mNetwork.networkPlayers.Length;i++){
+							// check if the player is active
+							if(mNetwork.networkPlayers[i].isActive == true){
+							// get the connection ID
 							int relayConID = mNetwork.GetConnectionIDForPlayer(i);
+							// send to the player
 							mNetwork.sv_RelayRPCToConnection(ref rawData,relayConID,channelID);
+							}
 						}
 					break;
 					case mNetworkRPCMode.Server:
-
+						Debug.Log("Handling the message on server");
+						throw new NotImplementedException("FINISH THIS CODE HERE");
 					break;
 
 					case mNetworkRPCMode.None:
+						Debug.Log("Forwarding to correct client");
+						throw new NotImplementedException("FINISH THIS CODE HERE");
 					break;
 					case mNetworkRPCMode.Others:
 						Debug.Log("Redistributing message to others...");
+						throw new NotImplementedException("FINISH THIS CODE HERE");
 					break;
 					}
 				}
@@ -317,7 +326,7 @@ public static class mNetworkManager{
 	}
 
 	/// <summary>
-	/// CLIENT ONLY. Processes an RPC message.
+	/// CLIENT. Processes an RPC message.
 	/// </summary>
 	/// <param name="_msg">Message.</param>
 	private static void cl_ProcessRPC_ND(mNetworkRPCMessage_ND _msg){

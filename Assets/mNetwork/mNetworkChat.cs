@@ -207,7 +207,9 @@ public class mNetworkChat : mNetworkBehaviour {
 	void SendChatMsg () {
 		// calculate msg
 		msgToSend = plName+": "+inputMsg;
-		
+
+		Debug.Log("sending RPC chat");
+
 		thisNetworkID.SendRPC("NewMsg_ND",mNetworkRPCMode.All,mNetwork.reliableChannelId,msgToSend,1,2,3,false, 0.35f);
 	}
 }

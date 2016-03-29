@@ -90,10 +90,12 @@ public class mNetworkObjectID: MonoBehaviour {
 	}*/
 
 	public void SendRPC (string methodName, mNetworkPlayer targetPlayer, int channel, params object[] arguments){
+		Debug.Log("sending RPC objectId");
 		mNetwork.SendRPCMessage(methodName,id,targetPlayer,channel,arguments);
 	}
 
 	public void SendRPC (string methodName, mNetworkRPCMode rpcMode, int channel, params object[] arguments){
+		Debug.Log("sending RPC objectId");
 		mNetwork.SendRPCMessage(methodName,id,rpcMode,channel,arguments);
 	}
 }

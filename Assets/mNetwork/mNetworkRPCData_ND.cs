@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Reflection;
 
+namespace mNetworkLibrary{
+
 [System.Serializable]
 public class mNetworkRPCData_ND {
 	public MethodInfo[] rpcs;
@@ -45,3 +47,4 @@ public class mNetworkRPCData_ND {
 }
 
 
+}

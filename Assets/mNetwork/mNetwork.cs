@@ -126,6 +126,13 @@ public static class mNetwork {
 		
 		// setup the transport layer
 		SetupNetworkTransport();
+		// setup the network player array
+		networkPlayers = new mNetworkPlayer[maxConnections];
+			// check if we are a non-dedicated server
+			if(peerType == mNetworkPeerType.server){
+			// connect the client if we are a non-dedicated server
+			Connect("127.0.0.1",socketPort);
+			}
 	}
 	
 	public static void SetupAsClient () {
@@ -177,7 +184,14 @@ public static class mNetwork {
 			
 			// now create the network connections so we can view them
 			connections = new mNetworkConnection[maxConnections];
+
+
 			
+	}
+
+	public static void ShutDown () {
+		// clear the data
+		NetworkTransport.Shutdown();
 	}
 
 	#endregion
@@ -331,12 +345,18 @@ public static class mNetwork {
 	}
 	
 	#region RPC SENDING
+	/// <summary>
+	/// Sends an RPC Now. Sends this like a clientNote: use the server RPC call if this should be a server message.
+	/// </summary>
+	/// <param name="_dataToSend">Data to send.</param>
+	/// <param name="sendChannelID">Send channel I.</param>
+	private static void RPCNow (ref mNetworkRPCMessage_ND _dataToSend, int sendChannelID){
+			// TODO optimise this
+			// bypass the serialisation and just re-route it via network manager if we are a dedi server.
 
-	private static void RPCNow (ref mNetworkRPCMessage_ND _dataToSend, int _channelID){
 		// check if the network has been started
 		if(!(networkState == mNetworkState.connected)){
-			// TODO CHANGE THIS
-			//Debug.LogError("No RPC could be sent, since we are not connected");
+			
 			Debug.LogWarning("Not connected, so the RPC will only be local");
 			// send it locally instead
 			byte[] localbuffer = new byte[1024];
@@ -345,7 +365,7 @@ public static class mNetwork {
 				BinaryFormatter formatter = new BinaryFormatter();
 				formatter.Serialize(stream,_dataToSend);
 				// always process this like a client
-				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer, clientSocketId, -1, _channelID);
+				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer, clientSocketId, -1, sendChannelID);
 			}
 			return;
 		}
@@ -361,12 +381,14 @@ public static class mNetwork {
 		}
 
 		int bufferSize = 1024;
-		if (mNetwork.peerType == mNetworkPeerType.client) {
-			NetworkTransport.Send (clientSocketId, clientConnectionId, _channelID, buffer, bufferSize, out error);
+		if (peerType == mNetworkPeerType.client || peerType == mNetworkPeerType.server) {
+			NetworkTransport.Send (clientSocketId, clientConnectionId, sendChannelID, buffer, bufferSize, out error);
 		}
-		// we're a server, 
-		else{
-
+		// we're a dedicated server... shit...
+		// what to do...
+		else if(peerType == mNetworkPeerType.dedicatedServer){
+			// we're a dedicated server... so relay this to the correct client since we can't send this to ourselves
+			mNetworkManager.ProcessNonDelegateRPC(ref buffer,serverSocketId,-1,sendChannelID);
 		}
 	}
 
@@ -396,6 +418,7 @@ public static class mNetwork {
 	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
 	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkRPCMode _mode, int channelID, params object[] args){
+		Debug.Log("sending RPC mNetwork");
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
@@ -431,7 +454,7 @@ public static class mNetwork {
 	/// <param name="_connectionID">Connection ID.</param>
 	/// <param name="_channelID">Channel ID.</param> 
 	/// <param name="args">Arguments.</param>
-	private static void sv_SendRPCToConnection(string _methodName, mNetworkID _netID, int _connectionID, int _channelID, params object[] args){
+	private static void sv_SendRPC(string _methodName, mNetworkID _netID, int _connectionID, int _channelID, params object[] args){
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 
@@ -538,22 +561,32 @@ public static class mNetwork {
 					Debug.Log ("Connection ID: "+recConnectionId);
 					Debug.Log ("Recieved on channel: "+recChannelId);
 					
-					// add this connection to the list
-					NewNetworkConnection(recConnectionId, recSocketId);
+
 					
 					// this is a connection event on the server
 					if(recSocketId == serverSocketId){
 						Debug.Log ("Server: Player " + recConnectionId.ToString() + " connected!");
 						networkState = mNetworkState.connected;
+						// add this connection to the list
+						int newPlayerNum = NewNetworkConnection(recConnectionId, recSocketId);
 						// add the new network player
+						networkPlayers[newPlayerNum] = new mNetworkPlayer((byte)newPlayerNum,true);
 						// send the network player array to the new client
-						sv_SendRPCToConnection("SetNetworkPlayerArray",internalNetID,recConnectionId,seqReliableChannelId,networkPlayers);
+						sv_SendRPC("SetFullNetworkPlayerArray",internalNetID,recConnectionId,seqReliableChannelId,networkPlayers);
 						// update all clients with the new player
 					}
 					// this is our client who connected
+					// FORCE CLIENT ONLY, as a server also has a client socket ID:)
 					if(recSocketId == clientSocketId){
 						Debug.Log ("Client: Client connected to " + recConnectionId.ToString () + "!" );
+						if(peerType == mNetworkPeerType.client){
+						// add this connection to the list
+						NewNetworkConnection(recConnectionId, recSocketId);
 						networkState = mNetworkState.connected;
+						}
+						else{
+							Debug.Log("not adding new connection since we already have one");
+						}
 					}
 					
 					

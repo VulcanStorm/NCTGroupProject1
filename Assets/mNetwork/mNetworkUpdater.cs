@@ -10,6 +10,11 @@ public class mNetworkUpdater : MonoBehaviour {
 		mNetwork.PollNetworkEvents ();
 	}
 
+	void OnApplicationQuit(){
+		Debug.Log("quit");
+		mNetwork.ShutDown();
+	}
+
 
 }
 
