@@ -7,11 +7,14 @@ using System;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 
+namespace mNetworkLibrary{
+
 public static class mNetwork {
 	
 	// Network configuration variables
 	static ConnectionConfig config;
 
+	// TODO convert these to properties
 	// integers to hold the channel IDs
 	public static int reliableChannelId = -9;
 	public static int unreliableChannelId = -9;
@@ -37,6 +40,8 @@ public static class mNetwork {
 	public static mNetworkConnection[] connections;
 	// an array of netowrk players to send RPCs to
 	public static mNetworkPlayer[] networkPlayers;
+	// the network player that we belong to
+	public static mNetworkPlayer player;
 	// have we already setup the network
 	public static bool isStarted{
 		get{
@@ -180,7 +185,7 @@ public static class mNetwork {
 	#region NETWORK PLAYER ARRAY SYNCHRONISING
 		
 	[mNetworkRPC]
-	static void SetFullNetworkPlayerArray (mNetworkPlayer[] ary){
+	private static void SetFullNetworkPlayerArray (mNetworkPlayer[] ary){
 		networkPlayers = (mNetworkPlayer[])ary.Clone ();
 	}
 
@@ -188,8 +193,33 @@ public static class mNetwork {
 	private static void UpdateSingleNetworkPlayerInArray (int index, mNetworkPlayer _pl){
 		networkPlayers [index] = _pl;
 	}
+
+	[mNetworkRPC]
+	private static void SetCurrentNetworkPlayer (mNetworkPlayer _pl){
+		player = _pl;
+	}
+
+	private static void AddNewNetworkPlayer(int playerIndex){
+		// TODO fix this
+		throw new NotImplementedException();
+	}
 		
 	#endregion
+
+	static internal int GetConnectionIDForPlayer(mNetworkPlayer pl){
+		if(pl.isActive == true){
+		return connections[pl.playerNo].connectionID;
+		}
+		else{
+			return -1;
+		}
+	}
+
+	static internal int GetConnectionIDForPlayer (int playerNo){
+			return connections[playerNo].connectionID;
+	}
+
+	#region CONNECTION/DISCONNECTION
 
 	public static void Connect (string destinationIP, int destinationPort) {
 		if(networkState == mNetworkState.disconnected){
@@ -206,7 +236,7 @@ public static class mNetwork {
 			}
 			else{
 				Debug.Log("Connection Message Sent");
-				Debug.Log ("client id:"+clientConnectionId);
+				Debug.Log ("client connection id:"+clientConnectionId);
 			}
 		}
 	}
@@ -224,12 +254,14 @@ public static class mNetwork {
 			Debug.LogError("Cannot disconnect since no connection was started");
 		}
 	}
-	
-	// <----------------------------------------------------------------------------------------------------->
-	
-	// <----------------------------------------------------------------------------------------------------->
-	
-	static void NewNetworkConnection (int conId, int socketID){
+
+	/// <summary>
+	/// Creates a new Network Connection
+	/// </summary>
+	/// <returns>The index in the connection array that the data was stored in. Effectively the "player number", when on the server.</returns>
+	/// <param name="conId">Con identifier.</param>
+	/// <param name="socketID">Socket I.</param>
+	static int NewNetworkConnection (int conId, int socketID){
 		string cnAddress;
 		int cnPort;
 		byte cnError;
@@ -242,13 +274,14 @@ public static class mNetwork {
 		// check for an error
 		if(CheckForNetworkError(cnError)){
 			Debug.LogError("Could not get connection info.");
+			return -1;
 		}
 		else{
 			Debug.Log ("For Connection ID: "+conId);
 			Debug.Log ("Socket ID is: "+socketID);
 			Debug.Log ("Address is: "+cnAddress);
 			Debug.Log ("Port is: "+cnPort);
-			
+			int playerIndex = -1;
 			// iterate over the connections array to find an empty slot
 			for(int i=0;i<connections.Length;i++){
 				// we have found an empty slot
@@ -258,21 +291,39 @@ public static class mNetwork {
 					connections[i].ipAddress = cnAddress;
 					connections[i].port = cnPort;
 					connections[i].isActive = true;
+					// get the player index
+					playerIndex = i;
 					// cut the loop here
 					i=connections.Length;
 				}
 			}
-			
+			if(playerIndex == -1){
+				Debug.LogError("No connection array space for the new entry, no player index was obtained");
+			}
+			return playerIndex;
 		}
 	}
-	
-	static void RemoveNetworkConnection (int conId) {
+	/// <summary>
+	/// Removes a network connection from the array.
+	/// </summary>
+	/// <returns>The index that the connection was removed from, or -1 if the connection was not removed.</returns>
+	/// <param name="conId">Connection identifier.</param>
+	static int RemoveNetworkConnection (int conId) {
+		int foundConNr = -1;
 		for(int i=0;i<connections.Length;i++){
 			if(connections[i].connectionID == conId){
 				connections[i] = new mNetworkConnection();
+				foundConNr = i;
 			}
 		}
+		return foundConNr;
 	}
+
+	#endregion
+	// <----------------------------------------------------------------------------------------------------->
+	
+	// <----------------------------------------------------------------------------------------------------->
+
 	
 	[mNetworkRPC]
 	private static void LolRPC (int conID){
@@ -281,7 +332,7 @@ public static class mNetwork {
 	
 	#region RPC SENDING
 
-	private static void RPCNow (ref mNetworkRPCMessage_ND _dataToSend){
+	private static void RPCNow (ref mNetworkRPCMessage_ND _dataToSend, int _channelID){
 		// check if the network has been started
 		if(!(networkState == mNetworkState.connected)){
 			// TODO CHANGE THIS
@@ -293,7 +344,8 @@ public static class mNetwork {
 				
 				BinaryFormatter formatter = new BinaryFormatter();
 				formatter.Serialize(stream,_dataToSend);
-				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer);
+				// always process this like a client
+				mNetworkManager.ProcessNonDelegateRPC(ref localbuffer, clientSocketId, -1, _channelID);
 			}
 			return;
 		}
@@ -310,55 +362,47 @@ public static class mNetwork {
 
 		int bufferSize = 1024;
 		if (mNetwork.peerType == mNetworkPeerType.client) {
-			NetworkTransport.Send (clientSocketId, clientConnectionId, reliableChannelId, buffer, bufferSize, out error);
+			NetworkTransport.Send (clientSocketId, clientConnectionId, _channelID, buffer, bufferSize, out error);
 		}
-	}
-	
-	/// <summary>
-	/// Send an RPC message to the server only.
-	/// </summary>
-	/// <param name="_netId">Net identifier.</param>
-	/// <param name="_methodId">Method identifier.</param>
-	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage (mNetworkID _netId, ushort _methodId, params object[] args){
-		
-		// create the network message with the new formatted data
-		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netId,_methodId,args);
+		// we're a server, 
+		else{
 
-		RPCNow (ref dataToSend);
+		}
 	}
 
 	/// <summary>
 	/// Sends an RPC Message to the server only.
 	/// </summary>
-	/// <param name="_netId">Net identifier.</param>
 	/// <param name="_methodName">Method name.</param>
+	/// <param name="_netId">Net identifier.</param>
+	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage (mNetworkID _netId, string _methodName, params object[] args){
+	public static void SendRPCMessage (string _methodName, mNetworkID _netID, int channelID, params object[] args){
 		
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
 		// create the network message with the new formatted data
-		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netId,_methodId,args);
-		RPCNow (ref dataToSend);
+		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,args);
+		RPCNow (ref dataToSend,channelID);
 	}
 
 	/// <summary>
 	/// Sends an RPC message to a specific group.
 	/// </summary>
 	/// <param name="_methodName">Method name.</param>
-	/// <param name="_netID">Net I.</param>
+	/// <param name="_netID">Net ID.</param>
 	/// <param name="_mode">Mode.</param>
+	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkRPCMode _mode, params object[] args){
+	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkRPCMode _mode, int channelID, params object[] args){
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,_mode, args);
 
-		RPCNow(ref dataToSend);
+		RPCNow(ref dataToSend, channelID);
 	}
 
 	/// <summary>
@@ -367,15 +411,73 @@ public static class mNetwork {
 	/// <param name="_methodName">Method name.</param>
 	/// <param name="_netID">Net I.</param>
 	/// <param name="_targetPlayer">Target player.</param>
+	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkPlayer _targetPlayer, params object[] args){
+	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkPlayer _targetPlayer, int channelID, params object[] args){
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,_targetPlayer, args);
 
-		RPCNow(ref dataToSend);
+		RPCNow(ref dataToSend, channelID);
+	}
+
+	/// <summary>
+	/// SERVER ONLY. Sends an RPC to the specified connection.
+	/// </summary>
+	/// <param name="_methodName">Method name.</param>
+	/// <param name="_netID">Net ID.</param>
+	/// <param name="_connectionID">Connection ID.</param>
+	/// <param name="_channelID">Channel ID.</param> 
+	/// <param name="args">Arguments.</param>
+	private static void sv_SendRPCToConnection(string _methodName, mNetworkID _netID, int _connectionID, int _channelID, params object[] args){
+		// get the method ID for the name
+		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
+
+		// create the network message with the new formatted data
+		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,mNetworkRPCMode.None, args);
+		// check if we are connected
+		if(!(networkState == mNetworkState.connected)){
+			Debug.LogError("Not connected, no RPC sent");
+			return;
+		}
+		// check if we are a server
+		if(!(peerType == mNetworkPeerType.dedicatedServer || peerType == mNetworkPeerType.server)){
+			Debug.LogError("Not a server, cannot use this method");
+			return;
+		}
+		
+		byte error;
+		byte[] buffer = new byte[1024];
+		// using so the stream will be disposed of afterwards
+		using(Stream stream = new MemoryStream(buffer)){
+			
+			BinaryFormatter formatter = new BinaryFormatter();
+			formatter.Serialize(stream, dataToSend);
+			
+		}
+
+		int bufferSize = 1024;
+			NetworkTransport.Send (serverSocketId, _connectionID, _channelID, buffer, bufferSize, out error);
+			CheckForNetworkError(error);
+	}
+
+	public static void sv_RelayRPCToConnection(ref byte[] rawRPCData, int _connectionID, int _channelID){
+		// check if we are connected
+		if(!(networkState == mNetworkState.connected)){
+			Debug.LogError("Not connected, no RPC sent");
+			return;
+		}
+		// check if we are a server
+		if(!(peerType == mNetworkPeerType.dedicatedServer || peerType == mNetworkPeerType.server)){
+			Debug.LogError("Not a server, cannot use this method");
+			return;
+		}
+		byte error;
+		int bufferSize = rawRPCData.Length;
+		NetworkTransport.Send (serverSocketId, _connectionID, _channelID, rawRPCData, bufferSize, out error);
+		CheckForNetworkError(error);
 	}
 
 	#endregion
@@ -411,7 +513,11 @@ public static class mNetwork {
 				switch(err){
 				case NetworkError.Timeout:
 					// remove the connection
-					RemoveNetworkConnection(recConnectionId);
+					int removedConnectionID = RemoveNetworkConnection(recConnectionId);
+					// check if we're the server, because then we need to change the player array
+					if(recSocketId == serverSocketId){
+						// TODO send an RPC to everyone to clear the player from the array
+					}
 					break;
 				}
 			}
@@ -439,7 +545,9 @@ public static class mNetwork {
 					if(recSocketId == serverSocketId){
 						Debug.Log ("Server: Player " + recConnectionId.ToString() + " connected!");
 						networkState = mNetworkState.connected;
-						// send the network player array to the new client]
+						// add the new network player
+						// send the network player array to the new client
+						sv_SendRPCToConnection("SetNetworkPlayerArray",internalNetID,recConnectionId,seqReliableChannelId,networkPlayers);
 						// update all clients with the new player
 					}
 					// this is our client who connected
@@ -455,7 +563,7 @@ public static class mNetwork {
 					Debug.Log ("WOOT! WE GOT DATA!");
 					
 					// send the network manager the data to process
-					mNetworkManager.ProcessNonDelegateRPC(ref recBuffer);
+					mNetworkManager.ProcessNonDelegateRPC(ref recBuffer, recSocketId, recConnectionId, recChannelId);
 					
 					break;
 					
@@ -478,6 +586,7 @@ public static class mNetwork {
 					// server recieved disconnect message
 					if(recSocketId == serverSocketId){
 						Debug.Log ("Server: Received disconnect from " + recConnectionId.ToString () );
+						// TODO send an RPC to everyone to clear the player from the array
 					}
 					
 					break;
@@ -522,4 +631,6 @@ public static class mNetwork {
 			
 	}
 	
+}
+
 }

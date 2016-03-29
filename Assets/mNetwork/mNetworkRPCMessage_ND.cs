@@ -38,7 +38,7 @@ public class mNetworkRPCMessage_ND {
 	public mNetworkRPCMessage_ND(mNetworkID netId, ushort methodId, mNetworkPlayer _netPlayer, object[] inData) {
 		targetNetId = netId.idNum;
 		targetIdType = netId.type;
-		rpcMode = mNetworkRPCMode.server;
+		rpcMode = mNetworkRPCMode.Server;
 		networkPlayer = _netPlayer;
 		targetMethodId = methodId;
 		data = inData;
@@ -54,7 +54,7 @@ public class mNetworkRPCMessage_ND {
 	public mNetworkRPCMessage_ND(mNetworkID netId, ushort methodId, object[] inData) {
 		targetNetId = netId.idNum;
 		targetIdType = netId.type;
-		rpcMode = mNetworkRPCMode.server;
+		rpcMode = mNetworkRPCMode.Server;
 		networkPlayer = new mNetworkPlayer(0,false);
 		targetMethodId = methodId;
 		data = inData;

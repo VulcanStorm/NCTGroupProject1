@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace mNetworkLibrary{
+
 public class mNetworkUpdater : MonoBehaviour {
 	
 	// Update is called once per frame
@@ -8,5 +10,7 @@ public class mNetworkUpdater : MonoBehaviour {
 		mNetwork.PollNetworkEvents ();
 	}
 
+
+}
 
 }

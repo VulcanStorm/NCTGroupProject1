@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace mNetworkLibrary{
+
 public class mNetworkViewerGUI : MonoBehaviour {
 	
 	public int connectionId;
@@ -8,7 +10,7 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	Rect scrollContentRect = new Rect(0,100,155,0);
 
 	// connection rects
-	Rect myConnectionInfoRect = new Rect(0,100,175,250);
+	Rect scrollViewRect = new Rect(0,100,175,250);
 	Rect ipRect = new Rect(0,120,110,25);
 	Rect portRect = new Rect(0,120,40,25);
 	Rect socketRect = new Rect(0,135,150,25);
@@ -26,7 +28,7 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	void Start () {
 		scrollContentRect.x = Screen.width - 165;
 		// network connection draw rect
-		myConnectionInfoRect.x = Screen.width - 175;
+		scrollViewRect.x = Screen.width - 175;
 		ipRect.x = Screen.width - 155;
 		portRect.x = Screen.width - 50;
 		socketRect.x = Screen.width - 155;
@@ -41,27 +43,30 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	}
 
 	void OnGUI () {
+		// Draw the socket information
 		GUI.Box(mySocketInfoRect, "Socket Info:");
 		GUI.Label (serverIdRect,"sv socket:"+mNetwork.serverSocketId.ToString());
 		GUI.Label (clientSocketIdRect,"cl socket:"+mNetwork.clientSocketId.ToString ());
 		GUI.Label (clientConnectionIdRect,"cl conn:"+mNetwork.clientConnectionId.ToString ());
 		GUI.Label (peerTypeRect,mNetwork.peerType.ToString ());
-		int offset = 75;
+		// network connection list
 		if(mNetwork.connections != null){
-
-			GUI.Box(myConnectionInfoRect,"Connection Info:");
+			int offset = 75;
+			GUI.Box(scrollViewRect,"Connection Info:");
+			// set the content height to be long enough to view all the connections
 			scrollContentRect.height = 10 + (mNetwork.connections.Length*offset);
-			scrollVect = GUI.BeginScrollView(myConnectionInfoRect,scrollVect,scrollContentRect);
+			// draw the scroll view
+			scrollVect = GUI.BeginScrollView(scrollViewRect,scrollVect,scrollContentRect);
+			// draw all the connection data we have within the scroll view
 			for(int i=0;i<mNetwork.connections.Length;i++){
 				
 				connectionId = i;
-				//connectionId = Mathf.Clamp(connectionId,0,mNetwork.connections.Length-1);
 				drawRect = ipRect;
 				drawRect.y += i*offset;
-				GUI.Label(drawRect,"127.127.127.127"+"::");
+				GUI.Label(drawRect,mNetwork.connections[i].ipAddress+"::");
 				drawRect = portRect;
 				drawRect.y += i*offset;
-				GUI.Label(drawRect,"66666");
+				GUI.Label(drawRect,mNetwork.connections[i].port.ToString());
 				drawRect = socketRect;
 				drawRect.y += i*offset;
 				GUI.Label(drawRect,"Socket:"+mNetwork.connections[connectionId].socketID);
@@ -75,5 +80,8 @@ public class mNetworkViewerGUI : MonoBehaviour {
 				}
 			GUI.EndScrollView();
 		}
+		// TODO write a player list viewer
 	}
+}
+
 }

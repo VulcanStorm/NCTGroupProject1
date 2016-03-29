@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+using mNetworkLibrary;
+
 public class testNetworkBehaviour : mNetworkBehaviour {
 	
 	public Material red;
@@ -44,7 +46,7 @@ public class testNetworkBehaviour : mNetworkBehaviour {
 	}
 	
 	public void TryRPC () {
-		thisNetworkID.SendRPC("TestHi","hi");
+		thisNetworkID.SendRPC("TestHi",mNetworkRPCMode.All,mNetwork.reliableChannelId,"hi");
 	}
 	
 	void OnGUI () {

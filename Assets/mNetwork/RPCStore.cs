@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
+namespace mNetworkLibrary{
+
 public static class RPCStore {
 	
 	private static bool loadedRPCs = false;
@@ -85,4 +87,6 @@ public static class RPCStore {
 	
 	public static MethodInfo[] storedRPCs_ND;
 	public static Dictionary<string,int> lookupRPCNames_ND;
+}
+
 }
