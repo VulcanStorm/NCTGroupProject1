@@ -179,6 +179,7 @@ public class mNetworkChat : mNetworkBehaviour {
 			// the default send button
 			if(GUI.Button(sendBtnRect.rect,sendBtnRect.text)){
 				SendChatMsg();
+				inputMsg = string.Empty;
 			}
 			
 			currentFocus = GUI.GetNameOfFocusedControl();
