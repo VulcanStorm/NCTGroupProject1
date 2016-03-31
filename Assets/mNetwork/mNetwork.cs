@@ -221,7 +221,7 @@ public static class mNetwork {
 	#endregion
 
 	static internal int GetConnectionIDForPlayer(mNetworkPlayer pl){
-		if(pl.isActive == true){
+		if(pl.playerNo < connections.Length && pl.isActive == true){
 		return connections[pl.playerNo].connectionID;
 		}
 		else{
@@ -230,7 +230,12 @@ public static class mNetwork {
 	}
 
 	static internal int GetConnectionIDForPlayer (int playerNo){
-			return connections[playerNo].connectionID;
+		if(playerNo < connections.Length && connections[playerNo].isActive == true){
+		return connections[playerNo].connectionID;
+		}
+		else{
+			return -1;
+		}
 	}
 
 	#region CONNECTION/DISCONNECTION

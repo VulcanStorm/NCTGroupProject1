@@ -231,7 +231,7 @@ public static class mNetworkManager{
 		}
 	}
 	
-	/*public*/ static void ProcessDelegateRPC(ref byte[] rawData){
+	/*public static void ProcessDelegateRPC(ref byte[] rawData){
 		
 		try{
 		
@@ -260,7 +260,7 @@ public static class mNetworkManager{
 		catch(Exception e){
 			Debug.LogException(e);
 		}
-	}
+	}*/
 
 	#region RPC PROCESSING
 	/// <summary>
@@ -289,6 +289,7 @@ public static class mNetworkManager{
 				else if(socketID == mNetwork.serverSocketId){
 					// this needs to be re-directed unless it is for the server
 					switch(msg.rpcMode){
+					// SEND TO ALL
 					case mNetworkRPCMode.All:
 						// redistribute this message to everyone
 						Debug.Log("Redistributing message to all...");
@@ -296,7 +297,7 @@ public static class mNetworkManager{
 						int i=0;
 						// check if we are a server, since we also posess a client
 						if(mNetwork.peerType == mNetworkPeerType.server){
-						// skip the first player, since this will always be our client
+						// skip the first player, since this will always be our client, and we're calling the function locally anyway
 							i = 1;
 						}
 
@@ -311,20 +312,52 @@ public static class mNetworkManager{
 						}
 
 						// if we're a dedicated server, we need this message too... since it won't be relayed to our client
-						// if we're a server, 
 						local_ProcessRPC_ND(msg);
 					break;
+					// SEND TO SERVER ONLY
 					case mNetworkRPCMode.Server:
-						Debug.Log("Handling the message on server");
-						throw new NotImplementedException("FINISH THIS CODE HERE");
+						Debug.Log("Handling the message on server...");
+						// just process this here locally
+						local_ProcessRPC_ND(msg);
 					break;
 
 					case mNetworkRPCMode.None:
-						Debug.Log("Forwarding to correct client");
-						throw new NotImplementedException("FINISH THIS CODE HERE");
+						Debug.Log("Forwarding to correct client...");
+						// get the connection ID
+						int targetConID = mNetwork.GetConnectionIDForPlayer(msg.networkPlayer.playerNo);
+						// check if this exists
+						if(targetConID != -1){
+							// forward the message
+							mNetwork.sv_RelayRPCToConnection(ref rawData,targetConID,channelID);
+						}
+						else{
+								throw new ArgumentNullException("NO RPC Target given. RPCMode is none, and player is invalid (out of range or not active).");
+						}
+
 					break;
 					case mNetworkRPCMode.Others:
 						Debug.Log("Redistributing message to others...");
+
+						int a=0;
+						// check if we are a server, since we also posess a client
+						if(mNetwork.peerType == mNetworkPeerType.server){
+						// skip the first player, since this will always be our client, and we're calling the function locally anyway
+							a = 1;
+						}
+
+						for(a=0;a<mNetwork.networkPlayers.Length;a++){
+							// check if the player is active
+							if(mNetwork.networkPlayers[a].isActive == true && mNetwork.connections[a].connectionID != connectionID){
+							// get the connection ID for this player
+							int relayConID = mNetwork.GetConnectionIDForPlayer(a);
+							// send to the player
+							mNetwork.sv_RelayRPCToConnection(ref rawData,relayConID,channelID);
+							}
+						}
+
+						// if we're a dedicated server, we need this message too... since it won't be relayed to our client
+						local_ProcessRPC_ND(msg);
+
 						throw new NotImplementedException("FINISH THIS CODE HERE");
 					break;
 					}
