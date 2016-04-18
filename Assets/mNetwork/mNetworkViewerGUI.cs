@@ -1,55 +1,72 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace mNetworkLibrary{
+
 public class mNetworkViewerGUI : MonoBehaviour {
 	
-	Rect conRect = new Rect(0,0,150,25);
-	
 	public int connectionId;
-	
-	Rect ipRect = new Rect(0,0,150,25);
-	Rect portRect = new Rect(0,0,50,25);
-	Rect socketRect = new Rect(0,20,150,25);
-	Rect connectionRect = new Rect(0,40,150,25);
-	Rect activeRect = new Rect(0,60,150,25);
-	Rect serverIdRect = new Rect (0, 0, 100, 25);
-	Rect clientSocketIdRect = new Rect (0, 25, 100, 25);
-	Rect clientConnectionIdRect = new Rect (0, 50, 100, 25);
-	Rect peerTypeRect = new Rect (0, 75, 150, 25);
+	public Vector2 scrollVect = Vector2.zero;
+	Rect scrollContentRect = new Rect(0,100,155,0);
+
+	// connection rects
+	Rect scrollViewRect = new Rect(0,100,175,250);
+	Rect ipRect = new Rect(0,120,110,25);
+	Rect portRect = new Rect(0,120,40,25);
+	Rect socketRect = new Rect(0,135,150,25);
+	Rect connectionRect = new Rect(0,150,150,25);
+	Rect activeRect = new Rect(0,165,140,25);
 	Rect drawRect;
+
+	// socket info rects
+	Rect mySocketInfoRect = new Rect(0,0,100,100);
+	Rect serverIdRect = new Rect (0, 20, 100, 100);
+	Rect clientSocketIdRect = new Rect (0, 40, 100, 25);
+	Rect clientConnectionIdRect = new Rect (0, 60, 100, 25);
+	Rect peerTypeRect = new Rect (0, 80, 150, 25);
+
 	void Start () {
+		scrollContentRect.x = Screen.width - 165;
 		// network connection draw rect
-		ipRect.x = Screen.width - 200;
+		scrollViewRect.x = Screen.width - 175;
+		ipRect.x = Screen.width - 155;
 		portRect.x = Screen.width - 50;
-		socketRect.x = Screen.width - 150;
-		connectionRect.x = Screen.width - 150;
-		activeRect.x = Screen.width - 150;
+		socketRect.x = Screen.width - 155;
+		connectionRect.x = Screen.width - 155;
+		activeRect.x = Screen.width - 155;
 		// network info draw rects
-		serverIdRect.x = Screen.width - 300;
-		clientSocketIdRect.x = Screen.width - 300;
-		clientConnectionIdRect.x = Screen.width - 300;
-		peerTypeRect.x = Screen.width - 300;
+		mySocketInfoRect.x = Screen.width - 100;
+		serverIdRect.x = Screen.width - 95;
+		clientSocketIdRect.x = Screen.width - 95;
+		clientConnectionIdRect.x = Screen.width - 95;
+		peerTypeRect.x = Screen.width - 95;
 	}
-	
+
 	void OnGUI () {
-
-		GUI.Box (serverIdRect,"sv socket:"+mNetwork.serverSocketId.ToString());
-		GUI.Box (clientSocketIdRect,"cl socket:"+mNetwork.clientSocketId.ToString ());
-		GUI.Box (clientConnectionIdRect,"cl conn:"+mNetwork.clientConnectionId.ToString ());
-		GUI.Box (peerTypeRect,mNetwork.peerType.ToString ());
-
+		// Draw the socket information
+		GUI.Box(mySocketInfoRect, "Socket Info:");
+		GUI.Label (serverIdRect,"sv socket:"+mNetwork.serverSocketId.ToString());
+		GUI.Label (clientSocketIdRect,"cl socket:"+mNetwork.clientSocketId.ToString ());
+		GUI.Label (clientConnectionIdRect,"cl conn:"+mNetwork.clientConnectionId.ToString ());
+		GUI.Label (peerTypeRect,mNetwork.peerType.ToString ());
+		// network connection list
 		if(mNetwork.connections != null){
-			//if(mNetwork.connections.Length != 0){
+			int offset = 75;
+			GUI.Box(scrollViewRect,"Connection Info:");
+			// set the content height to be long enough to view all the connections
+			scrollContentRect.height = 10 + (mNetwork.connections.Length*offset);
+			// draw the scroll view
+			scrollVect = GUI.BeginScrollView(scrollViewRect,scrollVect,scrollContentRect);
+			// draw all the connection data we have within the scroll view
 			for(int i=0;i<mNetwork.connections.Length;i++){
-				int offset = 95;
+				
 				connectionId = i;
-				//connectionId = Mathf.Clamp(connectionId,0,mNetwork.connections.Length-1);
 				drawRect = ipRect;
 				drawRect.y += i*offset;
-				GUI.Label(drawRect,mNetwork.connections[connectionId].ipAddress);
+				GUI.Label(drawRect,mNetwork.connections[i].ipAddress+"::");
 				drawRect = portRect;
 				drawRect.y += i*offset;
-				GUI.Label(drawRect,mNetwork.connections[connectionId].port.ToString());
+				GUI.Label(drawRect,mNetwork.connections[i].port.ToString());
 				drawRect = socketRect;
 				drawRect.y += i*offset;
 				GUI.Label(drawRect,"Socket:"+mNetwork.connections[connectionId].socketID);
@@ -61,7 +78,10 @@ public class mNetworkViewerGUI : MonoBehaviour {
 				GUI.Label(drawRect, "Active?:"+mNetwork.connections[connectionId].isActive);
 
 				}
-			//}
+			GUI.EndScrollView();
 		}
+		// TODO write a player list viewer
 	}
+}
+
 }

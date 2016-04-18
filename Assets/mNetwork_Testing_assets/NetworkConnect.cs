@@ -2,6 +2,8 @@
 using System.Collections;
 using System;
 
+using mNetworkLibrary;
+
 public class NetworkConnect : MonoBehaviour {
 	
 	public string ipAddress = "127.0.0.1";
@@ -19,7 +21,7 @@ public class NetworkConnect : MonoBehaviour {
 	void OnGUI () {
 		
 		if(GUI.Button (new Rect(0,250,100,25),"LOLRPC")){
-			mNetwork.SendRPCMessage(mNetwork.internalNetID,"LolRPC", 50);
+			mNetwork.SendRPCMessage("LolRPC",mNetwork.internalNetID,mNetwork.reliableChannelId, 50);
 		}
 		
 		// check if we are disconnected
