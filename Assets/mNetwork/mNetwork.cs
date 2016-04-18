@@ -55,7 +55,9 @@ public static class mNetwork {
 	// this is an internal ID used so that any network messages sent via this,
 	// are sent straight to the network manager.
 	public static readonly mNetworkID internalNetID = new mNetworkID(0,mNetworkIDType.Scene);
-
+	
+	public static string ipString;
+	
 	#region NETWORK SETUP
 
 	public static void StartmNetwork () {
@@ -133,6 +135,16 @@ public static class mNetwork {
 			// connect the client if we are a non-dedicated server
 			Connect("127.0.0.1",socketPort);
 			}
+			// set the IP and port info
+			string hostName = Dns.GetHostName();
+			Debug.Log ("Host name is: " + hostName);
+			IPHostEntry hostEntry = Dns.GetHostEntry(hostName);
+			IPAddress[] ipList = hostEntry.AddressList;
+			for (int i=0; i<ipList.Length; i++) {
+				Debug.Log ("ip "+i+": "+ipList[i].ToString());
+			}
+			//System.Net.NetworkInformation.IPAddressInformation ipInfo;
+			//Debug.Log (ipInfo.Address.ToString ());
 	}
 	
 	public static void SetupAsClient () {

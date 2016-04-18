@@ -25,6 +25,10 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	Rect clientConnectionIdRect = new Rect (0, 60, 100, 25);
 	Rect peerTypeRect = new Rect (0, 80, 150, 25);
 
+	// network information rects
+		Rect myIpRect = new Rect(0,0,150,25);
+		Rect svPortRect = new Rect (150, 0, 100, 25);
+
 	void Start () {
 		scrollContentRect.x = Screen.width - 165;
 		// network connection draw rect
@@ -34,12 +38,14 @@ public class mNetworkViewerGUI : MonoBehaviour {
 		socketRect.x = Screen.width - 155;
 		connectionRect.x = Screen.width - 155;
 		activeRect.x = Screen.width - 155;
-		// network info draw rects
+		// socket info draw rects
 		mySocketInfoRect.x = Screen.width - 100;
 		serverIdRect.x = Screen.width - 95;
 		clientSocketIdRect.x = Screen.width - 95;
 		clientConnectionIdRect.x = Screen.width - 95;
 		peerTypeRect.x = Screen.width - 95;
+		// network info rects
+		
 	}
 
 	void OnGUI () {
@@ -50,36 +56,44 @@ public class mNetworkViewerGUI : MonoBehaviour {
 		GUI.Label (clientConnectionIdRect,"cl conn:"+mNetwork.clientConnectionId.ToString ());
 		GUI.Label (peerTypeRect,mNetwork.peerType.ToString ());
 		// network connection list
-		if(mNetwork.connections != null){
-			int offset = 75;
-			GUI.Box(scrollViewRect,"Connection Info:");
-			// set the content height to be long enough to view all the connections
-			scrollContentRect.height = 10 + (mNetwork.connections.Length*offset);
-			// draw the scroll view
-			scrollVect = GUI.BeginScrollView(scrollViewRect,scrollVect,scrollContentRect);
-			// draw all the connection data we have within the scroll view
-			for(int i=0;i<mNetwork.connections.Length;i++){
+		if (mNetwork.connections != null) {
+				// draw the ip and port rects
+				GUI.Box (myIpRect,"IP.IP.IP.IP");
+				GUI.Box (svPortRect, "PORT");
+
+				int offset = 75;
+				GUI.Box (scrollViewRect, "Connection Info:");
+				// set the content height to be long enough to view all the connections
+				scrollContentRect.height = 10 + (mNetwork.connections.Length * offset);
+				// draw the scroll view
+				scrollVect = GUI.BeginScrollView (scrollViewRect, scrollVect, scrollContentRect);
+				// draw all the connection data we have within the scroll view
+				for (int i=0; i<mNetwork.connections.Length; i++) {
 				
-				connectionId = i;
-				drawRect = ipRect;
-				drawRect.y += i*offset;
-				GUI.Label(drawRect,mNetwork.connections[i].ipAddress+"::");
-				drawRect = portRect;
-				drawRect.y += i*offset;
-				GUI.Label(drawRect,mNetwork.connections[i].port.ToString());
-				drawRect = socketRect;
-				drawRect.y += i*offset;
-				GUI.Label(drawRect,"Socket:"+mNetwork.connections[connectionId].socketID);
-				drawRect = connectionRect;
-				drawRect.y += i*offset;
-				GUI.Label(drawRect, "Con ID:"+mNetwork.connections[connectionId].connectionID);
-				drawRect = activeRect;
-				drawRect.y += i*offset;
-				GUI.Label(drawRect, "Active?:"+mNetwork.connections[connectionId].isActive);
+					connectionId = i;
+					drawRect = ipRect;
+					drawRect.y += i * offset;
+					GUI.Label (drawRect, mNetwork.connections [i].ipAddress + "::");
+					drawRect = portRect;
+					drawRect.y += i * offset;
+					GUI.Label (drawRect, mNetwork.connections [i].port.ToString ());
+					drawRect = socketRect;
+					drawRect.y += i * offset;
+					GUI.Label (drawRect, "Socket:" + mNetwork.connections [connectionId].socketID);
+					drawRect = connectionRect;
+					drawRect.y += i * offset;
+					GUI.Label (drawRect, "Con ID:" + mNetwork.connections [connectionId].connectionID);
+					drawRect = activeRect;
+					drawRect.y += i * offset;
+					GUI.Label (drawRect, "Active?:" + mNetwork.connections [connectionId].isActive);
 
 				}
-			GUI.EndScrollView();
-		}
+				GUI.EndScrollView ();
+
+
+			}
+
+
 		// TODO write a player list viewer
 	}
 }
