@@ -5,6 +5,8 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System;
 
+using mNetworkLibrary;
+
 public class mNetworkChat : mNetworkBehaviour {
 	
 	public static mNetworkChat singleton;
@@ -205,7 +207,9 @@ public class mNetworkChat : mNetworkBehaviour {
 	void SendChatMsg () {
 		// calculate msg
 		msgToSend = plName+": "+inputMsg;
-		
-		thisNetworkID.SendRPC("NewMsg_ND",msgToSend,1,2,3,false, 0.35f);
+
+		Debug.Log("sending RPC chat");
+
+		thisNetworkID.SendRPC("NewMsg_ND",mNetworkRPCMode.All,mNetwork.reliableChannelId,msgToSend,1,2,3,false, 0.35f);
 	}
 }

@@ -2,6 +2,8 @@
 using UnityEditor;
 using System.Collections;
 
+namespace mNetworkLibrary{
+
 [ExecuteInEditMode]
 public class NetworkWindow : EditorWindow {
 	static string currentScene;
@@ -77,4 +79,6 @@ public class NetworkWindow : EditorWindow {
 		}
 		}
 	}
+}
+
 }

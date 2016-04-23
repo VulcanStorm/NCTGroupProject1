@@ -10,6 +10,7 @@ using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Reflection;
 
+namespace mNetworkLibrary{
 
 public static class mNetworkManager{
 	
@@ -230,7 +231,7 @@ public static class mNetworkManager{
 		}
 	}
 	
-	/*public*/ static void ProcessDelegateRPC(ref byte[] rawData){
+	/*public static void ProcessDelegateRPC(ref byte[] rawData){
 		
 		try{
 		
@@ -259,64 +260,162 @@ public static class mNetworkManager{
 		catch(Exception e){
 			Debug.LogException(e);
 		}
-	}
+	}*/
 
 	#region RPC PROCESSING
-
-	public static void ProcessNonDelegateRPC(ref byte[] rawData){
+	/// <summary>
+	/// Processes a non-delegate RPC.
+	/// </summary>
+	/// <param name="rawData">The Raw byte array data.</param>
+	/// <param name="socketID">The socket that this RPC was recieved in. -1 if local.</param>
+	/// <param name="connectionID">The connection ID that this message came in on.</param> 
+	public static void ProcessNonDelegateRPC(ref byte[] rawData, int socketID, int connectionID, int channelID){
 		
 		try{
 			
 			using(Stream stream = new MemoryStream(rawData)){
 				//deserialise the data
 				BinaryFormatter formatter = new BinaryFormatter();
+
 				mNetworkRPCMessage_ND msg = (mNetworkRPCMessage_ND)formatter.Deserialize(stream);
-				// find the type of script that this method belongs to
-				System.Type classType = RPCStore.storedRPCs_ND[msg.targetMethodId].DeclaringType;
-				Debug.Log ("Class type is "+classType);
-				// create a variable to hold the script reference
-				mNetworkBehaviour netScript = null;
-				// create a variable to hold whether this is an internal RPC
-				bool isInternalRPC = false;
-				// get the script on the object
-				if(msg.targetIdType == mNetworkIDType.Game){
-					netScript = gameNetworkIDs[msg.targetNetId].targetObject.GetComponent(classType) as mNetworkBehaviour;
+				// read the message and determine the required action
+
+				// check if it was recieved in the client socket
+				if(socketID == mNetwork.clientSocketId){
+					// process this like a client
+					local_ProcessRPC_ND(msg);
 				}
-				else{
-				// check id this is for the network manager
-					if(msg.targetNetId == 0){
-						isInternalRPC = true;
+				// check if it was recieved in the server socket
+				else if(socketID == mNetwork.serverSocketId){
+					// this needs to be re-directed unless it is for the server
+					switch(msg.rpcMode){
+					// SEND TO ALL
+					case mNetworkRPCMode.All:
+						// redistribute this message to everyone
+						Debug.Log("Redistributing message to all...");
+
+						int i=0;
+						// check if we are a server, since we also posess a client
+						if(mNetwork.peerType == mNetworkPeerType.server){
+						// skip the first player, since this will always be our client, and we're calling the function locally anyway
+							i = 1;
+						}
+
+						for(i=0;i<mNetwork.networkPlayers.Length;i++){
+							// check if the player is active
+							if(mNetwork.networkPlayers[i].isActive == true){
+							// get the connection ID
+							int relayConID = mNetwork.GetConnectionIDForPlayer(i);
+							// send to the player
+							mNetwork.sv_RelayRPCToConnection(ref rawData,relayConID,channelID);
+							}
+						}
+
+						// if we're a dedicated server, we need this message too... since it won't be relayed to our client
+						local_ProcessRPC_ND(msg);
+					break;
+					// SEND TO SERVER ONLY
+					case mNetworkRPCMode.Server:
+						Debug.Log("Handling the message on server...");
+						// just process this here locally
+						local_ProcessRPC_ND(msg);
+					break;
+
+					case mNetworkRPCMode.None:
+						Debug.Log("Forwarding to correct client...");
+						// get the connection ID
+						int targetConID = mNetwork.GetConnectionIDForPlayer(msg.networkPlayer.playerNo);
+						// check if this exists
+						if(targetConID != -1){
+							// forward the message
+							mNetwork.sv_RelayRPCToConnection(ref rawData,targetConID,channelID);
+						}
+						else{
+								throw new ArgumentNullException("NO RPC Target given. RPCMode is none, and player is invalid (out of range or not active).");
+						}
+
+					break;
+					case mNetworkRPCMode.Others:
+						Debug.Log("Redistributing message to others...");
+
+						int a=0;
+						// check if we are a server, since we also posess a client
+						if(mNetwork.peerType == mNetworkPeerType.server){
+						// skip the first player, since this will always be our client, and we're calling the function locally anyway
+							a = 1;
+						}
+
+						for(a=0;a<mNetwork.networkPlayers.Length;a++){
+							// check if the player is active
+							if(mNetwork.networkPlayers[a].isActive == true && mNetwork.connections[a].connectionID != connectionID){
+							// get the connection ID for this player
+							int relayConID = mNetwork.GetConnectionIDForPlayer(a);
+							// send to the player
+							mNetwork.sv_RelayRPCToConnection(ref rawData,relayConID,channelID);
+							}
+						}
+
+						// if we're a dedicated server, we need this message too... since it won't be relayed to our client
+						local_ProcessRPC_ND(msg);
+
+						throw new NotImplementedException("FINISH THIS CODE HERE");
+					break;
 					}
-					else{
-						netScript = sceneNetworkIDs[msg.targetNetId].targetObject.GetComponent(classType) as mNetworkBehaviour;
-					}
-				}
-				
-				
-				// execute the method
-				Debug.Log ("Calling method:"+RPCStore.storedRPCs_ND[msg.targetMethodId].Name);
-				MethodInfo methodInfo = RPCStore.storedRPCs_ND[msg.targetMethodId];
-				ParameterInfo[] parameters = methodInfo.GetParameters();
-				object[] newParameterData = new object[msg.data.Length];
-				
-				for(int i=0;i<msg.data.Length;i++){
-					newParameterData[i] = Convert.ChangeType(msg.data[i],parameters[i].ParameterType);
-				}
-				// check if this RPC is internal
-				if(isInternalRPC == false){
-					RPCStore.storedRPCs_ND[msg.targetMethodId].Invoke(netScript,newParameterData);	
-				}
-				else{
-					RPCStore.storedRPCs_ND[msg.targetMethodId].Invoke (null,newParameterData);
 				}
 			}
-			
 		}
 		catch(Exception e){
 			Debug.LogException(e);
 		}
 	}
 
-	#endregion
+	/// <summary>
+	/// CLIENT. Processes an RPC message.
+	/// </summary>
+	/// <param name="_msg">Message.</param>
+	private static void local_ProcessRPC_ND(mNetworkRPCMessage_ND _msg){
+		// find the type of script that this method belongs to
+		System.Type classType = RPCStore.storedRPCs_ND[_msg.targetMethodId].DeclaringType;
+		Debug.Log ("Class of RPC being processed is "+classType);
+		// create a variable to hold the script reference
+		mNetworkBehaviour netScript = null;
+		// create a variable to hold whether this is an internal RPC
+		bool isInternalRPC = false;
+		// get the script on the object
+		if(_msg.targetIdType == mNetworkIDType.Game){
+			netScript = gameNetworkIDs[_msg.targetNetId].targetObject.GetComponent(classType) as mNetworkBehaviour;
+		}
+		else{
+		// check id this is for the network manager
+			if(_msg.targetNetId == 0){
+				isInternalRPC = true;
+			}
+			else{
+				netScript = sceneNetworkIDs[_msg.targetNetId].targetObject.GetComponent(classType) as mNetworkBehaviour;
+			}
+		}
+
+
+		// execute the method
+		Debug.Log ("Calling method:"+RPCStore.storedRPCs_ND[_msg.targetMethodId].Name);
+		MethodInfo methodInfo = RPCStore.storedRPCs_ND[_msg.targetMethodId];
+		ParameterInfo[] parameters = methodInfo.GetParameters();
+		object[] newParameterData = new object[_msg.data.Length];
+
+		for(int i=0;i<_msg.data.Length;i++){
+			newParameterData[i] = Convert.ChangeType(_msg.data[i],parameters[i].ParameterType);
+		}
+		// check if this RPC is internal
+		if(isInternalRPC == false){
+			RPCStore.storedRPCs_ND[_msg.targetMethodId].Invoke(netScript,newParameterData);	
+		}
+		else{
+			RPCStore.storedRPCs_ND[_msg.targetMethodId].Invoke (null,newParameterData);
+		}
+	}
+
+#endregion
 	
+}
+
 }

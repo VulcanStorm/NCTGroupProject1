@@ -4,6 +4,8 @@ using System;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
+using mNetworkLibrary;
+
 public delegate void RpcFunction (mNetworkBehaviour TargetScript, byte[] NetData);
 
 [System.Serializable]

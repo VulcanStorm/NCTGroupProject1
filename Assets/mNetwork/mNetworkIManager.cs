@@ -2,6 +2,8 @@
 //using UnityEditor;
 using System.Collections;
 
+using mNetworkLibrary;
+
 [ExecuteInEditMode]
 public class mNetworkIManager : MonoBehaviour {
 		[SerializeField]

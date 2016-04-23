@@ -7,7 +7,7 @@ using System.Reflection;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-
+using mNetworkLibrary;
 
 
 public class ScriptListCollector {
@@ -186,9 +186,9 @@ public class ScriptListCollector {
 			//if(script.GetType().Equals(typeof(MonoScript))){
 			
 			//	allScripts.Add (script.name,(MonoScript)script);
-			///Debug.Log(stuff.name);
+			//Debug.Log("Reading:" +stuff.name);
 			Type stuffType = stuff.GetClass();
-			//Debug.Log("Class: "+stuffType);
+			//Debug.Log("Found Class: "+stuffType);
 			//}
 			if(stuffType != null){
 				try{
@@ -197,12 +197,18 @@ public class ScriptListCollector {
 						//Debug.Log (stuff.name + " is derived from Network Behaviour");
 						//Debug.Log (stuff.name + " is being checked");
 						// get all the methods in the class
-						MethodInfo[] methodsInStuff = stuffType.GetMethods();
-						//Debug.Log ("There are "+methodsInStuff.Length+" methods that are declared in the class");
+					MethodInfo[] methodsInStuff = stuffType.GetMethods(BindingFlags.Default|BindingFlags.DeclaredOnly|BindingFlags.ExactBinding|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public);
+						//Debug.Log ("There are "+methodsInStuff.Length+" methods that exist in the class");
+					//
+					//MethodInfo[] methods2 = stuffType.GetMethods(BindingFlags.Default|BindingFlags.DeclaredOnly|BindingFlags.ExactBinding|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public);
+						//Debug.Log("There are "+methods2.Length+" methods that are explicitly declared");
+						//for(int i=0;i<methods2.Length;i++){
+						//Debug.Log(methods2[i].Name+"()");
+						//}
+						//Debug.Log("<<--- END METHODS 2 --->>");
 						for(int i=0;i<methodsInStuff.Length;i++){
 							
 							//Debug.Log("loop "+i);
-							//Debug.Log (methodsInStuff[i].DeclaringType);
 							if(methodsInStuff[i].DeclaringType == stuffType){
 								//Debug.Log (methodsInStuff[i].Name+"()");
 								object[] methodAttributes = methodsInStuff[i].GetCustomAttributes(typeof(mNetworkRPC),false);
@@ -213,7 +219,7 @@ public class ScriptListCollector {
 									rpcList.Add (methodsInStuff[i]);
 									
 									// add the function to the array
-									Debug.Log ("RPC was added to list");
+									//Debug.Log ("RPC was added to list");
 								}
 							}
 							/*object[] methodAttributes = methodsInStuff[i].GetCustomAttributes(true);
