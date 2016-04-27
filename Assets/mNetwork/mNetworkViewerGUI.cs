@@ -26,8 +26,9 @@ public class mNetworkViewerGUI : MonoBehaviour {
 	Rect peerTypeRect = new Rect (0, 80, 150, 25);
 
 	// network information rects
-		Rect myIpRect = new Rect(0,0,150,25);
-		Rect svPortRect = new Rect (150, 0, 100, 25);
+	Rect myIpRect = new Rect(0,0,150,25);
+	Rect svPortRect = new Rect (150, 0, 100, 25);
+	Rect clPortRect = new Rect (150, 25, 100, 25);
 
 	void Start () {
 		scrollContentRect.x = Screen.width - 165;
@@ -57,9 +58,20 @@ public class mNetworkViewerGUI : MonoBehaviour {
 		GUI.Label (peerTypeRect,mNetwork.peerType.ToString ());
 		// network connection list
 		if (mNetwork.connections != null) {
-				// draw the ip and port rects
-				GUI.Box (myIpRect,"IP.IP.IP.IP");
-				GUI.Box (svPortRect, "PORT");
+				if(mNetwork.networkState == mNetworkState.connected){
+					if(mNetwork.peerType == mNetworkPeerType.client){
+						// draw the ip and port rects
+						GUI.Box (myIpRect,"ip:"+mNetwork.ipString);
+						// use the server port rect
+						GUI.Box (svPortRect, "cl:"+mNetwork.clientPort.ToString());
+					}
+					else{
+						// draw the ip and port rects
+						GUI.Box (myIpRect,"ip:"+mNetwork.ipString);
+						GUI.Box (svPortRect, "sv:"+mNetwork.serverPort.ToString());
+						GUI.Box (clPortRect, "cl:"+mNetwork.clientPort.ToString());
+					}
+				}
 
 				int offset = 75;
 				GUI.Box (scrollViewRect, "Connection Info:");

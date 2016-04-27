@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using System.IO;
@@ -56,7 +57,36 @@ public static class mNetwork {
 	// are sent straight to the network manager.
 	public static readonly mNetworkID internalNetID = new mNetworkID(0,mNetworkIDType.Scene);
 	
-	public static string ipString;
+	public static string ipString {
+		get{
+			return _ipStr;
+		}
+		private set{
+			_ipStr = value;
+		}
+	}
+	public static ushort clientPort {
+		get{
+			return _clPort;
+		}
+		private set{
+			_clPort = value;
+		}
+	}
+	public static ushort serverPort {
+		get {
+			return _svPort;
+		}
+		private set {
+			_svPort = value;
+		}
+	}
+	private static string _ipStr;
+	private static ushort _clPort;
+	private static ushort _svPort;
+	
+	// list of rpcs in the buffer, will get sent before all other network messages
+	public static List<mNetworkRPCMessage_ND> bufferedRPCs = new List<mNetworkRPCMessage_ND>();
 	
 	#region NETWORK SETUP
 
@@ -110,8 +140,10 @@ public static class mNetwork {
 		if(hasSetupNetworkTransport == true){
 			return;
 		}
-		
+		// set the socket port
 		socketPort = port;
+		// since we're a server, set the server port
+		serverPort = port;
 		
 		hasSetupNetworkTransport = true;
 		
@@ -133,7 +165,7 @@ public static class mNetwork {
 			// check if we are a non-dedicated server
 			if(peerType == mNetworkPeerType.server){
 			// connect the client if we are a non-dedicated server
-			Connect("127.0.0.1",socketPort);
+			Connect("127.0.0.1",serverPort);
 			}
 			// set the IP and port info
 			string hostName = Dns.GetHostName();
@@ -143,8 +175,9 @@ public static class mNetwork {
 			for (int i=0; i<ipList.Length; i++) {
 				Debug.Log ("ip "+i+": "+ipList[i].ToString());
 			}
-			//System.Net.NetworkInformation.IPAddressInformation ipInfo;
-			//Debug.Log (ipInfo.Address.ToString ());
+			// set the local ip address
+			ipString = ipList [0].ToString();
+
 	}
 	
 	public static void SetupAsClient () {
@@ -175,13 +208,14 @@ public static class mNetwork {
 			// set the topology
 			HostTopology svTopology = new HostTopology(config,maxConnections);
 			HostTopology clTopology = new HostTopology(config,1);
-			
+
+
 			// get the socket ID
 			// try to open the sockets
 			try{
 				
 				if(peerType != mNetworkPeerType.client){
-					serverSocketId = NetworkTransport.AddHost(svTopology,socketPort);
+					serverSocketId = NetworkTransport.AddHost(svTopology,serverPort);
 					Debug.Log("Server Socket Open. SocketId is: "+serverSocketId);
 				}
 				if(peerType != mNetworkPeerType.dedicatedServer){
@@ -233,7 +267,7 @@ public static class mNetwork {
 	#endregion
 
 	static internal int GetConnectionIDForPlayer(mNetworkPlayer pl){
-		if(pl.playerNo < connections.Length && pl.isActive == true){
+		if(pl.playerNo < connections.Length){
 		return connections[pl.playerNo].connectionID;
 		}
 		else{
@@ -242,7 +276,7 @@ public static class mNetwork {
 	}
 
 	static internal int GetConnectionIDForPlayer (int playerNo){
-		if(playerNo < connections.Length && connections[playerNo].isActive == true){
+		if(playerNo < connections.Length){
 		return connections[playerNo].connectionID;
 		}
 		else{
@@ -280,10 +314,18 @@ public static class mNetwork {
 			NetworkTransport.Disconnect(serverSocketId,clientConnectionId,out error);
 			CheckForNetworkError(error);
 			networkState = mNetworkState.disconnected;
+			// clear the player lists and the connection array
+			CleanupNetworkDataArrays();
 		}
 		else{
 			Debug.LogError("Cannot disconnect since no connection was started");
 		}
+	}
+
+	private static void CleanupNetworkDataArrays (){
+		// empty the arrays
+		networkPlayers = new mNetworkPlayer[0];
+		connections = new mNetworkConnection[0];
 	}
 
 	/// <summary>
@@ -351,11 +393,37 @@ public static class mNetwork {
 	}
 
 	#endregion
-	// <----------------------------------------------------------------------------------------------------->
-	
-	// <----------------------------------------------------------------------------------------------------->
 
+	public static void NetworkInstantiate(GameObject _object, Vector3 _position, Quaternion _rotation){
+			// get the object asset id
+			NetworkTransport.GetAssetId (_object);
+			// send a message to all clients to build this object
+
+		}
 	
+	// <----------------------------------------------------------------------------------------------------->
+	
+	// <----------------------------------------------------------------------------------------------------->
+	/// <summary>
+	/// called from server, once all data has been sent
+	/// </summary>
+	[mNetworkRPC]
+	static void AllServerDataRecieved() {
+		GameObject[] gos = GameObject.FindObjectsOfType<GameObject> ();
+		foreach(GameObject go in gos){
+			go.SendMessage("OnConnectedToServer",SendMessageOptions.DontRequireReceiver);
+		}
+	}
+	
+	/// <summary>
+	/// Sent via RPC from the server. Used to set the client port on a remote machine.
+	/// </summary>
+	/// <param name="port">Port.</param>
+	[mNetworkRPC]
+	static void SetClientPort(int port){
+		clientPort = (ushort)port;
+	}
+
 	[mNetworkRPC]
 	private static void LolRPC (int conID){
 		Debug.Log("OMFG LOL " + conID);
@@ -502,6 +570,62 @@ public static class mNetwork {
 			NetworkTransport.Send (serverSocketId, _connectionID, _channelID, buffer, bufferSize, out error);
 			CheckForNetworkError(error);
 	}
+	
+		/// <summary>
+		/// Send raw RPC data.
+		/// </summary>
+		/// <param name="_msg">_msg.</param>
+		/// <param name="_sendChannelID">_send channel I.</param>
+	private static void sv_SendRawRPC (mNetworkRPCMessage_ND _msg, int _sendChannelID){
+			// check if the network has been started
+			if (networkState == mNetworkState.connected) {
+				
+
+			// send it locally instead
+			byte error;
+			byte[] localbuffer = new byte[1024];
+			using (Stream stream = new MemoryStream(localbuffer)) {
+					
+				BinaryFormatter formatter = new BinaryFormatter ();
+				formatter.Serialize (stream, _msg);
+				
+			}
+			// relay this to the correct destination
+			mNetworkManager.ProcessNonDelegateRPC(ref localbuffer,serverSocketId,-1,_sendChannelID);
+			
+		} else {
+			Debug.LogWarning ("Not connected, RPC not sent");
+		}
+	}
+	
+	/// <summary>
+	/// Sends raw rpc data to a specfic connection. Used when executing the RPC buffer.
+	/// </summary>
+	/// <param name="_msg">_msg.</param>
+	/// <param name="_connectionID">_connection I.</param>
+	/// <param name="_sendChannelID">_send channel I.</param>
+	private static void sv_SendRawRPCToConnection (mNetworkRPCMessage_ND _msg, int _connectionID, int _sendChannelID){
+		// check if the network has been started
+		if (networkState == mNetworkState.connected) {
+			
+			
+			// send it locally instead
+			byte error;
+			byte[] localbuffer = new byte[1024];
+			using (Stream stream = new MemoryStream(localbuffer)) {
+				
+				BinaryFormatter formatter = new BinaryFormatter ();
+				formatter.Serialize (stream, _msg);
+				
+			}
+			// relay this to the correct destination
+			NetworkTransport.Send (serverSocketId, _connectionID, _sendChannelID, localbuffer, localbuffer.Length, out error);
+			CheckForNetworkError(error);
+			
+		} else {
+			Debug.LogWarning ("Not connected, RPC not sent");
+		}
+	}
 
 	public static void sv_RelayRPCToConnection(ref byte[] rawRPCData, int _connectionID, int _channelID){
 		// check if we are connected
@@ -567,6 +691,18 @@ public static class mNetwork {
 								Debug.LogError("Failed to Remove Network Connection");
 							}
 						}
+						// check if this was recieved in our client socket
+						// therfore we must have timed out
+						else if(recSocketId == clientSocketId){
+							// we are now disconnected
+							networkState = mNetworkState.disconnected;
+							// clear the network data arrays
+							CleanupNetworkDataArrays();
+						}
+						else{
+							// unknown socket ID, error.
+							Debug.LogError("disconnect recieved in unknown socket");
+						}
 					}
 					// check if we were connecting at the time, hence the connection failed
 					if(networkState == mNetworkState.connecting){
@@ -602,10 +738,28 @@ public static class mNetwork {
 						// add this connection to the list
 						int newPlayerNum = NewNetworkConnection(recConnectionId, recSocketId);
 						// add the new network player
-						networkPlayers[newPlayerNum] = new mNetworkPlayer((byte)newPlayerNum,true);
+						// set this network player as loading, so active = false
+						networkPlayers[newPlayerNum] = new mNetworkPlayer((byte)newPlayerNum,false);
+						
 						// send the network player array to the new client
 						sv_SendRPC("SetFullNetworkPlayerArray",internalNetID,recConnectionId,seqReliableChannelId,networkPlayers);
+						// notify the client of its player number
+						sv_SendRPC("SetCurrentNetworkPlayer",internalNetID,recConnectionId,seqReliableChannelId,networkPlayers[newPlayerNum]);
+						// notify the client of the port that it is communicating on
+						// TODO, possibly remove this if its a security risk. But there is no other way to know what port you are using...
+						sv_SendRPC("SetClientPort",internalNetID,recConnectionId,seqReliableChannelId,connections[newPlayerNum].port);
 						// update all clients with the new player
+						SendRPCMessage("UpdateSingleNetworkPlayerInArray",internalNetID,mNetworkRPCMode.All,seqReliableChannelId,newPlayerNum, networkPlayers[newPlayerNum]);
+						
+						// execute the buffer of RPCs
+							for(int i=0;i<bufferedRPCs.Count;i++){
+								sv_SendRawRPCToConnection(bufferedRPCs[i],recConnectionId,seqReliableChannelId);
+							}
+						// TODO does the client know how many functions its recieving?
+						sv_SendRPC("AllServerDataRecieved",internalNetID,recConnectionId,seqReliableChannelId);
+						// this connection is no longer loading
+						networkPlayers[newPlayerNum].isActive = true;
+						// update all clients with the now active player
 						SendRPCMessage("UpdateSingleNetworkPlayerInArray",internalNetID,mNetworkRPCMode.All,seqReliableChannelId,newPlayerNum, networkPlayers[newPlayerNum]);
 					}
 					// this is our client who connected
@@ -615,6 +769,7 @@ public static class mNetwork {
 						if(peerType == mNetworkPeerType.client){
 						// add this connection to the list
 						NewNetworkConnection(recConnectionId, recSocketId);
+						
 						networkState = mNetworkState.connected;
 						}
 						else{

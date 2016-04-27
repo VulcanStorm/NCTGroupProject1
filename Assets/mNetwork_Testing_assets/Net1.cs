@@ -6,6 +6,7 @@ using System.IO;
 using System;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
+using mNetworkLibrary;
 
 /*
 public enum mNetworkState :byte {

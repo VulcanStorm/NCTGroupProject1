@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace mNetworkLibrary{
+
 [System.Serializable]
-public class mNetworkRPCMessage_ND {
+public struct mNetworkRPCMessage_ND {
 
 	public ushort targetNetId;
 	public mNetworkPlayer networkPlayer;
@@ -59,4 +61,6 @@ public class mNetworkRPCMessage_ND {
 		targetMethodId = methodId;
 		data = inData;
 	}
+}
+
 }
