@@ -394,12 +394,61 @@ public static class mNetwork {
 
 	#endregion
 
-	public static void NetworkInstantiate(GameObject _object, Vector3 _position, Quaternion _rotation){
-			// get the object asset id
-			NetworkTransport.GetAssetId (_object);
-			// send a message to all clients to build this object
+	/// <summary>
+	/// Sends an instantiation call over the network
+	/// </summary>
+	/// <param name="_object">Object.</param>
+	/// <param name="_position">Position.</param>
+	/// <param name="_rotation">Rotation.</param>
+	public static void Instantiate(GameObject _object, Vector3 _position, Quaternion _rotation){
+		SVector3 spos = _position.GetSerialised();
+		SQuaternion srot = _rotation.GetSerialised();
+		// get the object prefab id
+		int prefabId = mNetworkPrefabs.GetIdForPrefab(_object);
+		// send a message to all clients to build this object
+		SendRPCMessage("REQ_NetworkInstantiate",internalNetID,seqReliableChannelId,prefabId,spos,srot);
 
+	}
+
+	/// <summary>
+	/// Called on the SERVER ONLY, via an RPC from Instantiate
+	/// </summary>
+	/// <param name="prefabId">Prefab identifier.</param>
+	/// <param name="netId">Net identifier.</param>
+	/// <param name="pos">Position.</param>
+	/// <param name="rot">Rot.</param>
+	[mNetworkRPC]
+	private static void REQ_NetworkInstantiate (int prefabId, SVector3 pos, SQuaternion rot) {
+		Debug.Log("Recieved Network Instantiation Request");
+		// get a new network id for this object
+		mNetworkID newNetId = mNetworkManager.GetNextUnusedGameID();
+		Debug.Log("Game ID for instantiation is: "+newNetId.idNum);
+		// send this message to all players to spawn this object
+		mNetworkRPCMessage_ND msg = SendRPCMessage("REC_NetworkInstantiate",internalNetID,mNetworkRPCMode.All,seqReliableChannelId,prefabId,newNetId,pos,rot);
+		// add this to the buffer
+		AddRPCToBuffer(msg);
+	}
+
+	[mNetworkRPC]
+	private static void REC_NetworkInstantiate (int prefabId, mNetworkID netId, SVector3 pos, SQuaternion rot){
+		Debug.Log("Recieved Network Instantiation. Creating Object...");
+		// create the prefab
+		mNetworkPrefabs.CreatePrefabFromID(prefabId,netId,pos,rot);
+
+	}
+
+	/// <summary>
+	/// Adds the RPC to the buffer. Can only be used on server, since the client doesnt use the buffer.
+	/// </summary>
+	/// <param name="_msg">Message.</param>
+	public static void AddRPCToBuffer (mNetworkRPCMessage_ND _msg){
+		if(peerType == mNetworkPeerType.server || peerType == mNetworkPeerType.dedicatedServer){
+			bufferedRPCs.Add(_msg);
 		}
+		else{
+			Debug.LogError("Cannot call this from a client. Since only the server uses the RPC buffer.");
+		}
+	}
 	
 	// <----------------------------------------------------------------------------------------------------->
 	
@@ -484,14 +533,17 @@ public static class mNetwork {
 	/// <param name="_netId">Net identifier.</param>
 	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage (string _methodName, mNetworkID _netID, int channelID, params object[] args){
+	public static mNetworkRPCMessage_ND SendRPCMessage (string _methodName, mNetworkID _netID, int channelID, params object[] args){
 		
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,args);
+		// send that rpc now.
 		RPCNow (ref dataToSend,channelID);
+		// return the data... incase we want to add this to the buffer
+		return dataToSend;
 	}
 
 	/// <summary>
@@ -502,15 +554,18 @@ public static class mNetwork {
 	/// <param name="_mode">Mode.</param>
 	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkRPCMode _mode, int channelID, params object[] args){
+	/// <returns> The RPC message data</returns>
+	public static mNetworkRPCMessage_ND SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkRPCMode _mode, int channelID, params object[] args){
 		Debug.Log("sending RPC mNetwork");
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,_mode, args);
-
+		// send that rpc now
 		RPCNow(ref dataToSend, channelID);
+		// return the data... incase we want to add this to the buffer
+		return dataToSend;
 	}
 
 	/// <summary>
@@ -521,14 +576,16 @@ public static class mNetwork {
 	/// <param name="_targetPlayer">Target player.</param>
 	/// <param name="channelID">Channel identifier.</param>
 	/// <param name="args">Arguments.</param>
-	public static void SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkPlayer _targetPlayer, int channelID, params object[] args){
+	public static mNetworkRPCMessage_ND SendRPCMessage(string _methodName, mNetworkID _netID, mNetworkPlayer _targetPlayer, int channelID, params object[] args){
 		// get the method ID for the name
 		ushort _methodId = (ushort)RPCStore.GetIDForRPCName_ND(_methodName);
 		
 		// create the network message with the new formatted data
 		mNetworkRPCMessage_ND dataToSend = new mNetworkRPCMessage_ND(_netID,_methodId,_targetPlayer, args);
-
+		// send that rpc now
 		RPCNow(ref dataToSend, channelID);
+		// return the data... incase we want to add this to the buffer
+		return dataToSend;
 	}
 
 	/// <summary>

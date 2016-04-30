@@ -3,6 +3,8 @@ using System.Collections;
 using mNetworkLibrary;
 
 public class PlayerManager : mNetworkBehaviour {
+	
+	public GameObject playerPrefab;
 
 	public PlayerData[] playerDataList;
 	public int myPlayerIndex = -1;
@@ -54,8 +56,10 @@ public class PlayerManager : mNetworkBehaviour {
 		SendPlayerGameData ();
 	}
 
-	void SendPlayerGameData () {
+	private void SendPlayerGameData () {
+		// update our player game data... and add a network object for us to spawn
 		thisNetworkID.SendRPC ("REC_UpdatePlayerGameData", mNetworkRPCMode.Others, mNetwork.reliableChannelId, myPlayerIndex, playerDataList [myPlayerIndex].gameData);
+		mNetwork.Instantiate(playerPrefab,Vector3.zero,Quaternion.identity);
 	}
 
 	// Use this for initialization
