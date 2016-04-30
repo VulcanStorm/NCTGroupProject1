@@ -74,7 +74,13 @@ public class mNetworkObjectID: MonoBehaviour {
 		id = mNetworkManager.RegisterNewID(this);
 		hasAllocatedID = true;
 	}
-	
+
+	public void SetInGameID(mNetworkID _newId){
+		id = _newId;
+		hasAllocatedID = true;
+		autoAllocateID = false;
+	}
+
 	void OnDestroy () {
 		if(mNetworkManager.isCreated == true){
 			mNetworkManager.RemoveID(id);

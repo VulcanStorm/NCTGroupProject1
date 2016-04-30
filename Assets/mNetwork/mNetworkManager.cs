@@ -107,7 +107,7 @@ public static class mNetworkManager{
 			}
 		}
 	}
-	// HAHA
+
 	
 	public static void ReallocateSceneIds () {
 		CreateNetworkManager();
@@ -202,6 +202,43 @@ public static class mNetworkManager{
 		
 		return newID;
 		
+	}
+
+	/// <summary>
+	/// Sets an existing object Id. Used when network instantiating.
+	/// </summary>
+	/// <param name="_objId">Object identifier.</param>
+	/// <param name="_netId">Net identifier.</param>
+	internal static void SetExistingObjectID (mNetworkObjectID _objId, mNetworkID _netId) {
+		gameNetworkIDs[_netId.idNum].mNetID = _objId.id;
+		gameNetworkIDs[_netId.idNum].targetObject = _objId;
+		// this object has already allocated an ID, and don't auto allocate one.
+		_objId.hasAllocatedID = true;
+		_objId.autoAllocateID = false;
+
+	}
+
+
+	public static mNetworkID GetNextUnusedGameID () {
+		mNetworkID newID;
+			if(reUsedGameIDs.Count != 0){
+				newID.idNum = reUsedGameIDs.First.Value;
+				reUsedGameIDs.RemoveFirst();
+			}
+			// no IDs in the list, so get the next ID.
+			else{
+				nextGameNetID ++;
+				// check for overflow
+				if(nextGameNetID == gameNetworkIDs.Length){
+					Debug.LogError("The requested new Game ID cannot be allocated, all IDs have been used up");
+					throw new IndexOutOfRangeException();
+				}
+				Debug.Log ("Assigning Game ID number:"+nextGameNetID);
+				newID.idNum = (ushort)nextGameNetID;
+			}
+			// set the ID type to be a game id
+			newID.type = mNetworkIDType.Game;
+			return newID;
 	}
 	
 	
@@ -401,9 +438,15 @@ public static class mNetworkManager{
 		MethodInfo methodInfo = RPCStore.storedRPCs_ND[_msg.targetMethodId];
 		ParameterInfo[] parameters = methodInfo.GetParameters();
 		object[] newParameterData = new object[_msg.data.Length];
-
+		Debug.Log("There are "+parameters.Length+" parameters");
+		Debug.Log("There are "+_msg.data.Length+" values");
 		for(int i=0;i<_msg.data.Length;i++){
-			newParameterData[i] = Convert.ChangeType(_msg.data[i],parameters[i].ParameterType);
+			try{
+				newParameterData[i] = Convert.ChangeType(_msg.data[i],parameters[i].ParameterType);
+			}
+			catch(Exception e){
+				Debug.LogException(e);
+			}
 		}
 		// check if this RPC is internal
 		if(isInternalRPC == false){
