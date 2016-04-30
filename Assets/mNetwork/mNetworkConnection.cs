@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace mNetworkLibrary{
+
 [System.Serializable]
 public struct mNetworkConnection{
 	
@@ -9,5 +11,8 @@ public struct mNetworkConnection{
 	public int connectionID;
 	public string ipAddress;
 	public int port;
+
 	
+}
+
 }

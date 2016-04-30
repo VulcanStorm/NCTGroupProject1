@@ -301,7 +301,7 @@ public static class mNetworkManager{
 							i = 1;
 						}
 
-						for(i=0;i<mNetwork.networkPlayers.Length;i++){
+						for(;i<mNetwork.networkPlayers.Length;i++){
 							// check if the player is active
 							if(mNetwork.networkPlayers[i].isActive == true){
 							// get the connection ID
@@ -345,7 +345,7 @@ public static class mNetworkManager{
 							a = 1;
 						}
 
-						for(a=0;a<mNetwork.networkPlayers.Length;a++){
+						for(;a<mNetwork.networkPlayers.Length;a++){
 							// check if the player is active
 							if(mNetwork.networkPlayers[a].isActive == true && mNetwork.connections[a].connectionID != connectionID){
 							// get the connection ID for this player
@@ -358,7 +358,7 @@ public static class mNetworkManager{
 						// if we're a dedicated server, we need this message too... since it won't be relayed to our client
 						local_ProcessRPC_ND(msg);
 
-						throw new NotImplementedException("FINISH THIS CODE HERE");
+						//throw new NotImplementedException("FINISH THIS CODE HERE");
 					break;
 					}
 				}
