@@ -44,7 +44,7 @@ namespace mNetworkLibrary
 			return returnId;
 		}
 
-		internal static void CreatePrefabFromID (int _prefabID, mNetworkID _id, SVector3 _pos, SQuaternion _rot)
+		internal static void CreatePrefabFromID (int _prefabID, mNetworkID _id, SVector3 _pos, SQuaternion _rot, mNetworkPlayer recPlayer)
 		{
 			Debug.Log ("Prefab ID is " + _prefabID);
 			// check for a valid prefab ID
@@ -71,7 +71,7 @@ namespace mNetworkLibrary
 			// set the new object ID
 			mNetworkManager.SetExistingObjectID (objId, _id);
 			// call OnNetworkInstantiate on the object if it has one
-			newObj.SendMessage ("OnMNetworkInstantiate", SendMessageOptions.DontRequireReceiver);
+			newObj.SendMessage ("OnMNetworkInstantiate", recPlayer, SendMessageOptions.DontRequireReceiver);
 		}
 	}
 
