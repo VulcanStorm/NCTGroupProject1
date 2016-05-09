@@ -14,6 +14,9 @@ public class TestPlayer : mNetworkBehaviour
 	Vector3 inputVect;
 	Vector3 worldMoveVect;
 	float moveSpeed = 3;
+
+	Vector3 desiredPos;
+	float lastUpdateTime = 0;
 	// Use this for initialization
 	void Start ()
 	{
@@ -25,8 +28,8 @@ public class TestPlayer : mNetworkBehaviour
 	void Update ()
 	{
 		if (isLocal == true) {
-			inputVect.z = Input.GetAxis ("Vertical");
-			inputVect.x = Input.GetAxis ("Horizontal");
+			inputVect.z = Input.GetAxisRaw ("Vertical");
+			inputVect.x = Input.GetAxisRaw ("Horizontal");
 		}
 	}
 
@@ -37,6 +40,10 @@ public class TestPlayer : mNetworkBehaviour
 			worldMoveVect.Normalize ();
 			movePos = thisRigidbody.position + worldMoveVect * moveSpeed * Time.deltaTime;
 			thisRigidbody.MovePosition (movePos);
+		} else {
+			float timeDelta = 5*(Time.time - lastUpdateTime);
+			timeDelta = Mathf.Clamp01(timeDelta);
+			thisRigidbody.position = Vector3.Lerp(thisRigidbody.position,desiredPos,timeDelta);
 		}
 	}
 
@@ -45,15 +52,18 @@ public class TestPlayer : mNetworkBehaviour
 	}
 
 	[mNetworkRPC]
-	public void UpdatePosition (SVector3 newPos)
-	{
-		thisRigidbody.MovePosition (newPos.Deserialise ());
+	public void UpdatePosition (SVector3 newPos, SQuaternion rotation)
+	{	
+		lastUpdateTime = Time.time;
+		desiredPos = newPos.Deserialise ();
+		thisRigidbody.rotation = rotation.Deserialise ();
+
 	}
 
 	public void OnMNetworkUpdate ()
 	{
 		if (isLocal == true) {
-			thisNetworkID.SendRPC ("UpdatePosition", mNetworkRPCMode.Others, mNetwork.stateUpdateChannelId, movePos.GetSerialised ());
+			thisNetworkID.SendRPC ("UpdatePosition", mNetworkRPCMode.Others, mNetwork.stateUpdateChannelId, movePos.GetSerialised (), thisRigidbody.rotation.GetSerialised());
 		}
 		
 	}

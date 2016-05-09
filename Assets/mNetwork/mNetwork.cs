@@ -555,7 +555,7 @@ namespace mNetworkLibrary
 				BinaryFormatter formatter = new BinaryFormatter ();
 
 				formatter.Serialize (stream, _dataToSend);
-				Debug.Log ("stream length " + stream.Length);
+				//Debug.Log ("stream length " + stream.Length);
 				//buffer = new byte[stream.Length];
 				//stream.Read (buffer, 0, (int)stream.Length);
 
@@ -563,7 +563,7 @@ namespace mNetworkLibrary
 
 			}
 			int bufferSize = buffer.Length;
-			Debug.Log (bufferSize);
+			//Debug.Log (bufferSize);
 			if (peerType != mNetworkPeerType.dedicatedServer) {
 				NetworkTransport.Send (clientSocketId, clientConnectionId, sendChannelID, buffer, bufferSize, out error);
 			}
