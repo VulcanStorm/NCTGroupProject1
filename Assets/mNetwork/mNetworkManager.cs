@@ -356,7 +356,7 @@ namespace mNetworkLibrary
 						// SEND TO ALL
 						case mNetworkRPCMode.All:
 						// redistribute this message to everyone
-							Debug.Log ("Redistributing message to all...");
+							//Debug.Log ("Redistributing message to all...");
 
 							int i = 0;
 						// check if we are a server, since we also posess a client
@@ -380,13 +380,13 @@ namespace mNetworkLibrary
 							break;
 						// SEND TO SERVER ONLY
 						case mNetworkRPCMode.Server:
-							Debug.Log ("Handling the message on server...");
+							//Debug.Log ("Handling the message on server...");
 						// just process this here locally
 							local_ProcessRPC_ND (msg);
 							break;
 
 						case mNetworkRPCMode.None:
-							Debug.Log ("Forwarding to correct client...");
+							//Debug.Log ("Forwarding to correct client...");
 						// get the connection ID
 							int targetConID = mNetwork.GetConnectionIDForPlayer (msg.networkPlayer.playerNo);
 						// check if this exists
@@ -399,7 +399,7 @@ namespace mNetworkLibrary
 
 							break;
 						case mNetworkRPCMode.Others:
-							Debug.Log ("Redistributing message to others...");
+							//Debug.Log ("Redistributing message to others...");
 
 							for (int a = 0; a < mNetwork.networkPlayers.Length; a++) {
 								// check if the player is active
