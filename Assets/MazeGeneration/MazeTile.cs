@@ -5,6 +5,7 @@ using System.Collections;
 public struct MazeTile {
 
 	public MazeTileType tileType;
+	public MazeTileFeature feature;
 }
 
 [System.Serializable]
