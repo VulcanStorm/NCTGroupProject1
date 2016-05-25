@@ -868,7 +868,7 @@ public class MazeGen1 : MonoBehaviour{
 		return neighbours.ToArray ();
 	}
 	
-		public Vector2[] GetAllNonDeadEndNeighbours(Vector2 _pos, out int deadEndCount){
+	public Vector2[] GetAllNonDeadEndNeighbours(Vector2 _pos, out int deadEndCount){
 		List<Vector2> neighbours = new List<Vector2> ();
 		deadEndCount = 0;
 		for (int i = 0; i < 4; i++) {
@@ -886,7 +886,7 @@ public class MazeGen1 : MonoBehaviour{
 		return neighbours.ToArray ();
 	}
 
-		public Vector2[] GetAllFloorNeighbours(Vector2 _pos){
+	public Vector2[] GetAllFloorNeighbours(Vector2 _pos){
 			List<Vector2> neighbours = new List<Vector2> ();
 			for (int i = 0; i < 4; i++) {
 				if (CheckInBounds (_pos + lookupDir [i])) {
@@ -944,8 +944,6 @@ public class MazeGen1 : MonoBehaviour{
 
 		return false;
 	}
-
-
 	
 	bool CheckForHTile (Vector2 _pos){
 		// check the upper line
@@ -992,7 +990,7 @@ public class MazeGen1 : MonoBehaviour{
 
 	bool CheckForTTile (Vector2 _pos){
 		
-		Vector2 t1Pos, t2Pos, t3Pos;
+	Vector2 t1Pos, t2Pos, t3Pos;
 		// check the upper line
 		t1Pos = _pos + allDir [1];
 		t2Pos = _pos + allDir [2];
