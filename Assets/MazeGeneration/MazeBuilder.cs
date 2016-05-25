@@ -12,8 +12,13 @@ public class MazeBuilder : MonoBehaviour {
 	public int chunkSize = 8;
 
 	Vector2 worldSize;
-	float tileWidth = 1.5f;
-	float wallHeight = 2.5f;
+	int worldXSizeInt = 0;
+	int worldYSizeInt = 0;
+	public float tileWidth = 2f;
+	public float wallHeight = 3.5f;
+	public float floorThickness = 0.5f;
+
+	MazeTile[,] mazeToGen;
 
 	// Use this for initialization
 	void Start () {
@@ -32,10 +37,16 @@ public class MazeBuilder : MonoBehaviour {
 
 	void CreateMazeWorld (Vector3 center, MazeTile[,] rawData){
 			
+		mazeToGen = rawData;
+		mazeToGen [0, 0].tileType = MazeTileType.wall;
+		Debug.Log (mazeToGen [0, 0].tileType);
+		Debug.Log (rawData [0, 0].tileType);
 			
 		// create a new array
 
 		worldSize = new Vector2(rawData.GetLength(0),rawData.GetLength(1));
+		worldXSizeInt = (int)worldSize.x;
+		worldYSizeInt = (int)worldSize.y;
 		WorldController.singleton.chunkSize = chunkSize;
 
 		// create the world chunk array
@@ -84,6 +95,7 @@ public class MazeBuilder : MonoBehaviour {
 
 
 	void CreateChunkMesh (int x, int y, ref WorldChunk chunk){
+
 		// create a vertex list
 		List<Vector3> verts = new List<Vector3>();
 		// create a triangle list
@@ -112,15 +124,15 @@ public class MazeBuilder : MonoBehaviour {
 		int endYChunk = -1;
 		
 		// set the real ends of the chunk
-		if(endXPos > world.GetLength(0)){
-			endXChunk = world.GetLength(0)-startXPos;
+		if(endXPos > worldXSizeInt){
+			endXChunk = worldXSizeInt-startXPos;
 		}
 		else{
 			endXChunk = chunkSize;
 		}
 		
-		if(endYPos > world.GetLength(1)){
-			endYChunk = world.GetLength(1)-startYPos;
+		if(endYPos > worldYSizeInt){
+			endYChunk = worldYSizeInt-startYPos;
 		}
 		else{
 			endYChunk = chunkSize;
@@ -133,20 +145,27 @@ public class MazeBuilder : MonoBehaviour {
 				// calculate the world array coordinates
 				int worldXCoord = i+startXPos;
 				int worldYCoord = j+startYPos;
-				
-				// check if the current tile height is zero, since this shouldnt be drawn
-				if(world[worldXCoord,worldYCoord].height != 0){
-					
+				// TODO build in a floor
 					// calculate the position of this tile,relative to the chunk
 					// create the local position, so that the centre of the chunk is in the origin of the object
-					Vector3 tilePos = new Vector3(i-(chunkSize/2),world[worldXCoord,worldYCoord].height,j-(chunkSize/2));
+					Vector3 tilePos = new Vector3(i-(chunkSize/2),chunk.position.y,j-(chunkSize/2));
+
+					// check if this is a wall tile, if so, add the wall height
+					if(mazeToGen[i,j].tileType == MazeTileType.wall){
+						tilePos.y += wallHeight;
+					}
 					
-					// draw a face here
-					Vector3[] newVerts = new Vector3[4];
+					// draw a floor and ceiling face here
+					Vector3[] newVerts = new Vector3[8];
 					newVerts[0] = new Vector3(0,0,0)+tilePos;
 					newVerts[1] = new Vector3(0,0,1)+tilePos;
 					newVerts[2] = new Vector3(1,0,1)+tilePos;
 					newVerts[3] = new Vector3(1,0,0)+tilePos;
+
+					newVerts[4] = new Vector3(0,-floorThickness,0)+tilePos;
+					newVerts[5] = new Vector3(0,-floorThickness,1)+tilePos;
+					newVerts[6] = new Vector3(1,-floorThickness,1)+tilePos;
+					newVerts[7] = new Vector3(1,-floorThickness,0)+tilePos;
 					
 					int[] newTris = new int[6];
 					newTris[0] = 0+verts.Count;
@@ -155,7 +174,14 @@ public class MazeBuilder : MonoBehaviour {
 					newTris[3] = 0+verts.Count;
 					newTris[4] = 2+verts.Count;
 					newTris[5] = 3+verts.Count;
-					
+
+					newTris[6] = 2+verts.Count;
+					newTris[7] = 1+verts.Count;
+					newTris[8] = 0+verts.Count;
+					newTris[9] = 3+verts.Count;
+					newTris[10] = 2+verts.Count;
+					newTris[11] = 0+verts.Count;
+
 					for(int n=0;n<newVerts.Length;n++){
 						verts.Add(newVerts[n]);	
 					}
@@ -163,8 +189,6 @@ public class MazeBuilder : MonoBehaviour {
 					for(int n=0;n<newTris.Length;n++){
 						tris.Add(newTris[n]);
 					}
-					
-				}
 			}
 		}
 		
@@ -178,7 +202,7 @@ public class MazeBuilder : MonoBehaviour {
 		}
 		
 		#endregion
-		
+		/*
 		#region WALLS
 		
 		// draw the walls down
@@ -411,7 +435,7 @@ public class MazeBuilder : MonoBehaviour {
 		}
 		
 		#endregion
-		
+		*/
 		
 		// finally write this mesh data back to the chunk, so it can be rendered
 		//RemoveDuplicateVertices(ref verts, ref tris, ref uvs);
@@ -427,6 +451,97 @@ public class MazeBuilder : MonoBehaviour {
 		
 		
 		
+	}
+
+	void RemoveDuplicateVertices(ref List<Vector3> verts,ref List<int> tris){
+		
+		Debug.Log ("Verts before duplication removal " + verts.Count);
+		Debug.Log ("Tris before duplication removal " + tris.Count);
+		
+		// iterate over all of the vertices
+		for(int i=0;i<verts.Count;i++){
+			// check if there are duplicate positions
+			// iterate over all of the remaining, since any before will already have been checked
+			for(int k=i;k<verts.Count;k++){
+				// check if we have the same vertex as before...
+				if(i == k){
+					// do nothing, since we have the same vertex
+				}
+				else{
+					// check for the same position
+					if(verts[i] == verts[k]){
+						// merge this vertex
+						verts.RemoveAt(k);
+						
+						// now find all of the triangles that reference the removed vertex
+						// assign these to the merged one
+						for(int t=0;t<tris.Count;t++){
+							if(tris[t] == k){
+								tris[t] = i;
+							}
+							// if the vertex referenced is further on in the list
+							// than the current one we are merging into, then we 
+							// need to move the refernce down, since the list has just got shorter
+							else if(tris[t] > k){
+								tris[t] -=1;
+							}
+						}
+						
+					}
+				}
+			}
+		}
+		
+		
+		Debug.Log ("Verts after duplication removal " + verts.Count);
+		Debug.Log ("Tris after duplication removal " + tris.Count);
+		
+	}
+
+	void RemoveDuplicateVertices(ref List<Vector3> verts,ref List<int> tris, ref List<Vector2> uvs){
+		
+		Debug.Log ("Verts before duplication removal " + verts.Count);
+		Debug.Log ("Tris before duplication removal " + tris.Count);
+		Debug.Log ("UVs before duplication removal" + uvs.Count);
+		
+		// iterate over all of the vertices
+		for(int i=0;i<verts.Count;i++){
+			// check if there are duplicate positions
+			// iterate over all of the remaining, since any before will already have been checked
+			for(int k=i;k<verts.Count;k++){
+				// check if we have the same vertex as before...
+				if(i == k){
+					// do nothing, since we have the same vertex
+				}
+				else{
+					// check for the same position
+					if(verts[i] == verts[k]){
+						// merge this vertex
+						verts.RemoveAt(k);
+						// remove the associated uv
+						uvs.RemoveAt(k);
+						// now find all of the triangles that reference the removed vertex
+						// assign these to the merged one
+						for(int t=0;t<tris.Count;t++){
+							if(tris[t] == k){
+								tris[t] = i;
+							}
+							// if the vertex referenced is further on in the list
+							// than the current one we are merging into, then we 
+							// need to move the refernce down, since the list has just got shorter
+							else if(tris[t] > k){
+								tris[t] -=1;
+							}
+						}
+						
+					}
+				}
+			}
+		}
+		
+		Debug.Log ("Verts after duplication removal " + verts.Count);
+		Debug.Log ("Tris after duplication removal " + tris.Count);
+		Debug.Log ("UVs after duplication removal" + uvs.Count);
 	}
 
 	// used to destroy the world
