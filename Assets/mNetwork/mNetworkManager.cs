@@ -240,7 +240,7 @@ namespace mNetworkLibrary
 					Debug.LogError ("The requested new Game ID cannot be allocated, all IDs have been used up");
 					throw new IndexOutOfRangeException ();
 				}
-				Debug.Log ("Assigning Game ID number:" + nextGameNetID);
+				//Debug.Log ("Assigning Game ID number:" + nextGameNetID);
 				newID.idNum = (ushort)nextGameNetID;
 			}
 			// set the ID type to be a game id
@@ -454,7 +454,7 @@ namespace mNetworkLibrary
 
 
 			// execute the method
-			Debug.Log ("Calling method:" + RPCStore.storedRPCs_ND [_msg.targetMethodId].Name);
+			//Debug.Log ("Calling method:" + RPCStore.storedRPCs_ND [_msg.targetMethodId].Name);
 			MethodInfo methodInfo = RPCStore.storedRPCs_ND [_msg.targetMethodId];
 			ParameterInfo[] parameters = methodInfo.GetParameters ();
 			object[] newParameterData = new object[_msg.data.Length];
