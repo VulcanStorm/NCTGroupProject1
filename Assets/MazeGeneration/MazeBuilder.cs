@@ -150,14 +150,16 @@ public class MazeBuilder : MonoBehaviour {
 
 
 				// check if this is a wall tile, if so, add the wall height
-				if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.wall){
-					tilePos.y += wallHeight;
-					// draw nothing
-				}
-				else if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.floor){
-					
+				if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.floor){
+
+					Vector3[] newVerts;
+					int[] newTris;
+
+					switch(mazeToGen[worldXCoord,worldYCoord].feature){
+
+					default:
 					// draw floor face
-					Vector3[] newVerts = new Vector3[8];
+					newVerts = new Vector3[8];
 					newVerts[0] = new Vector3(0,0,0)+tilePos;
 					newVerts[1] = new Vector3(0,0,1*tileWidth)+tilePos;
 					newVerts[2] = new Vector3(1*tileWidth,0,1*tileWidth)+tilePos;
@@ -169,7 +171,7 @@ public class MazeBuilder : MonoBehaviour {
 					newVerts[6] = new Vector3(1*tileWidth,wallHeight,1*tileWidth)+tilePos;
 					newVerts[7] = new Vector3(1*tileWidth,wallHeight,0)+tilePos;
 					
-					int[] newTris = new int[12];
+					newTris = new int[12];
 					// create floor triangles
 					newTris[0] = 0+verts.Count;
 					newTris[1] = 1+verts.Count;
@@ -177,7 +179,7 @@ public class MazeBuilder : MonoBehaviour {
 					newTris[3] = 0+verts.Count;
 					newTris[4] = 2+verts.Count;
 					newTris[5] = 3+verts.Count;
-
+					
 					// create ceiling triangles
 					newTris[6] = 6+verts.Count;
 					newTris[7] = 5+verts.Count;
@@ -185,7 +187,51 @@ public class MazeBuilder : MonoBehaviour {
 					newTris[9] = 7+verts.Count;
 					newTris[10] = 6+verts.Count;
 					newTris[11] = 4+verts.Count;
+					
+					
+					break;
 
+
+					case MazeTileFeature.startTile:
+						// draw floor face
+						newVerts = new Vector3[4];
+						newVerts[0] = new Vector3(0,0,0)+tilePos;
+						newVerts[1] = new Vector3(0,0,1*tileWidth)+tilePos;
+						newVerts[2] = new Vector3(1*tileWidth,0,1*tileWidth)+tilePos;
+						newVerts[3] = new Vector3(1*tileWidth,0,0)+tilePos;
+						// draw the ceiling walls for dropping down
+
+						newTris = new int[12];
+						// create floor triangles
+						newTris[0] = 0+verts.Count;
+						newTris[1] = 1+verts.Count;
+						newTris[2] = 2+verts.Count;
+						newTris[3] = 0+verts.Count;
+						newTris[4] = 2+verts.Count;
+						newTris[5] = 3+verts.Count;
+
+						break;
+
+					case MazeTileFeature.endTile:
+						// don't draw a floor, just a ceiling
+
+						// draw ceiling face
+						newVerts = new Vector3[4];
+						newVerts[0] = new Vector3(0,wallHeight,0)+tilePos;
+						newVerts[1] = new Vector3(0,wallHeight,1*tileWidth)+tilePos;
+						newVerts[2] = new Vector3(1*tileWidth,wallHeight,1*tileWidth)+tilePos;
+						newVerts[3] = new Vector3(1*tileWidth,wallHeight,0)+tilePos;
+
+						newTris = new int[6];
+						// create ceiling triangles
+						newTris[0] = 2+verts.Count;
+						newTris[1] = 1+verts.Count;
+						newTris[2] = 0+verts.Count;
+						newTris[3] = 3+verts.Count;
+						newTris[4] = 2+verts.Count;
+						newTris[5] = 0+verts.Count;
+						break;
+					}
 					for(int n=0;n<newVerts.Length;n++){
 						verts.Add(newVerts[n]);	
 					}
@@ -193,12 +239,14 @@ public class MazeBuilder : MonoBehaviour {
 					for(int n=0;n<newTris.Length;n++){
 						tris.Add(newTris[n]);
 					}
-
-
 				}
+
+
 			}
 		}
 
+
+		
 		// now optimise this
 		RemoveDuplicateVertices(ref verts, ref tris);
 		// now calculate the uvs, after optimising the vertices
