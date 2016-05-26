@@ -59,6 +59,9 @@ public class MazeManager : MonoBehaviour {
 		allDir [6] = new Vector2 (0, -1);// down
 		allDir [7] = new Vector2 (-1, -1);// down left
 
+		// TODO change this
+		GeneratePracticeMaze (new Vector2(20,20));
+
 	}
 
 	void GeneratePracticeMaze (Vector2 size) {
@@ -78,6 +81,16 @@ public class MazeManager : MonoBehaviour {
 		while (mazeDone == false) {
 			yield return new WaitForEndOfFrame();
 		}
+		practiceMaze = new MazeTile[maze.GetLength (0), maze.GetLength (1)];
+		// set the practice maze data
+		for (int i = 0; i < maze.GetLength (0); i++) {
+			for (int j = 0; j < maze.GetLength (1); j++) {
+				practiceMaze[i,j].feature = maze[i,j].feature;
+				practiceMaze[i,j].tileType = maze[i,j].type;
+			}
+		}
+		// create the maze world
+		MazeBuilder.singleton.CreateMazeWorld (Vector3.zero,practiceMaze);
 	}
 
 	IEnumerator RunRecurseBackTrack3 () {
@@ -98,7 +111,7 @@ public class MazeManager : MonoBehaviour {
 		// keep choosing tiles from the list
 		while (emptyTiles.Count != 0) {
 			//Debug.Log ("---start move---");
-			yield return new WaitForEndOfFrame ();
+			//yield return new WaitForEndOfFrame ();
 
 			
 			// get the next tile position
@@ -214,7 +227,7 @@ public class MazeManager : MonoBehaviour {
 						AddNeighboursToCarve (pos);
 					}
 					////UpdateMazeTileWorld ();
-					yield return new WaitForEndOfFrame ();
+					//yield return new WaitForEndOfFrame ();
 				}
 				//yield return new WaitForSeconds(0.2f);
 			}
@@ -240,6 +253,7 @@ public class MazeManager : MonoBehaviour {
 	}
 
 	IEnumerator PlaceStartAndExit () {
+		Debug.Log ("placing start and exit");
 		////UpdateMazeTileWorld ();
 		yield return new WaitForEndOfFrame ();
 		//Application.CaptureScreenshot(Application.dataPath+"Maze_Screenshot_islands_before_"+mapNo+".png");
@@ -252,7 +266,7 @@ public class MazeManager : MonoBehaviour {
 		List<Vector2> nextTiles = new List<Vector2> ();
 		
 		while (tilesToCheck.Count != 0) {
-			yield return new WaitForEndOfFrame ();
+			//yield return new WaitForEndOfFrame ();
 			// flood fill
 			while(tilesToCheck.Count != 0) {
 				// get the neighbours, add all the un-visited ones to the list
@@ -277,7 +291,7 @@ public class MazeManager : MonoBehaviour {
 				tilesToCheck.RemoveAt (0);
 				
 			}
-			yield return new WaitForEndOfFrame ();
+			//yield return new WaitForEndOfFrame ();
 			//UpdateMazeTileWorld ();
 			for (int i = 0; i < nextTiles.Count; i++) {
 				tilesToCheck.Add (nextTiles [i]);
@@ -286,7 +300,7 @@ public class MazeManager : MonoBehaviour {
 			nextTiles.Clear ();
 			
 		}
-		//Debug.Log("Merging Islands...");
+		Debug.Log("Merging Islands...");
 		//Debug.Break ();
 		for (int i = 0; i < maze.GetLength (0); i++) {
 			for (int j = 0; j < maze.GetLength (1); j++){
@@ -302,7 +316,7 @@ public class MazeManager : MonoBehaviour {
 					nextTiles.Clear();
 					tilesToCheck.Add(maze[i,j].pos);
 					while (tilesToCheck.Count != 0) {
-						yield return new WaitForEndOfFrame ();
+						//yield return new WaitForEndOfFrame ();
 						// flood fill
 						while(tilesToCheck.Count != 0) {
 							// get the neighbours, add all the un-visited ones to the list
@@ -328,7 +342,7 @@ public class MazeManager : MonoBehaviour {
 							
 						}
 						//UpdateMazeTileWorld ();
-						yield return new WaitForEndOfFrame ();
+						//yield return new WaitForEndOfFrame ();
 						
 						for (int n = 0; n < nextTiles.Count; n++) {
 							tilesToCheck.Add (nextTiles [n]);
@@ -371,7 +385,7 @@ public class MazeManager : MonoBehaviour {
 												maze[(int)islandTiles[a].x,(int)islandTiles[a].y].isConnectedToStart = true;
 											}
 											//UpdateMazeTileWorld ();
-											yield return new WaitForEndOfFrame();
+											//yield return new WaitForEndOfFrame();
 										}
 										
 									}
@@ -409,7 +423,7 @@ public class MazeManager : MonoBehaviour {
 												// go back 1 space, and retry
 												j--;
 												//UpdateMazeTileWorld ();
-												yield return new WaitForEndOfFrame();
+												//yield return new WaitForEndOfFrame();
 											}
 											
 										}
@@ -444,7 +458,7 @@ public class MazeManager : MonoBehaviour {
 		tilesToCheck.Add (startPos);
 		// rescan the maze for the next furthest tile, since this might have changed when we merged the islands
 		while (tilesToCheck.Count != 0) {
-			yield return new WaitForEndOfFrame ();
+			//yield return new WaitForEndOfFrame ();
 			// flood fill
 			while(tilesToCheck.Count != 0) {
 				// get the neighbours, add all the un-visited ones to the list
@@ -469,7 +483,7 @@ public class MazeManager : MonoBehaviour {
 				tilesToCheck.RemoveAt (0);
 				
 			}
-			yield return new WaitForEndOfFrame ();
+			//yield return new WaitForEndOfFrame ();
 			//UpdateMazeTileWorld ();
 			for (int i = 0; i < nextTiles.Count; i++) {
 				tilesToCheck.Add (nextTiles [i]);
@@ -498,7 +512,7 @@ public class MazeManager : MonoBehaviour {
 			// set the new previous tile position
 			prevTilePos = GetTile (prevTilePos).prevTilePos;
 			//UpdateMazeTileWorld();
-			yield return new WaitForEndOfFrame ();
+			//yield return new WaitForEndOfFrame ();
 		}
 		//Debug.Log("Found Quickest Route");
 		//UpdateMazeTileWorld ();
@@ -534,7 +548,7 @@ public class MazeManager : MonoBehaviour {
 						maze [i, j].isDeadEnd = true;
 						maze[i,j].feature = MazeTileFeature.deadEndTile;
 						//UpdateMazeTileWorld ();
-						yield return new WaitForEndOfFrame ();
+						//yield return new WaitForEndOfFrame ();
 						Vector3 lastPos;
 						// the number of dead end tiles that are around the current tile being checked
 						int numOfDeadEnds = 0;
@@ -548,7 +562,7 @@ public class MazeManager : MonoBehaviour {
 							deadEndPassageLength += 1;
 							floorNeighbours = GetAllNonDeadEndNeighbours (lastPos, out numOfDeadEnds);
 							//UpdateMazeTileWorld ();
-							yield return new WaitForEndOfFrame ();
+							//yield return new WaitForEndOfFrame ();
 							
 						}
 						// check if this is an alcove, not a dead end
@@ -571,7 +585,7 @@ public class MazeManager : MonoBehaviour {
 		yield return new WaitForEndOfFrame ();
 		
 
-
+		Debug.Log ("Highlighted Dead Ends");
 		// finished the maze generation here
 		mazeDone = true;
 	}
