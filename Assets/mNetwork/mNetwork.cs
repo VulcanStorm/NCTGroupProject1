@@ -172,16 +172,7 @@ namespace mNetworkLibrary
 				// connect the client if we are a non-dedicated server
 				Connect ("127.0.0.1", serverPort);
 			}
-			// set the IP and port info
-			string hostName = Dns.GetHostName ();
-			Debug.Log ("Host name is: " + hostName);
-			IPHostEntry hostEntry = Dns.GetHostEntry (hostName);
-			IPAddress[] ipList = hostEntry.AddressList;
-			for (int i = 0; i < ipList.Length; i++) {
-				Debug.Log ("ip " + i + ": " + ipList [i].ToString ());
-			}
-			// set the local ip address
-			ipString = ipList [0].ToString ();
+
 
 		}
 
@@ -237,7 +228,16 @@ namespace mNetworkLibrary
 			// now create the network connections so we can view them
 			connections = new mNetworkConnection[maxConnections];
 
-
+			// set the IP and port info
+			string hostName = Dns.GetHostName ();
+			Debug.Log ("Host name is: " + hostName);
+			IPHostEntry hostEntry = Dns.GetHostEntry (hostName);
+			IPAddress[] ipList = hostEntry.AddressList;
+			for (int i = 0; i < ipList.Length; i++) {
+				Debug.Log ("ip " + i + ": " + ipList [i].ToString ());
+			}
+			// set the local ip address
+			ipString = ipList [0].ToString ();
 			
 		}
 
@@ -555,7 +555,7 @@ namespace mNetworkLibrary
 				BinaryFormatter formatter = new BinaryFormatter ();
 
 				formatter.Serialize (stream, _dataToSend);
-				Debug.Log ("stream length " + stream.Length);
+				//Debug.Log ("stream length " + stream.Length);
 				//buffer = new byte[stream.Length];
 				//stream.Read (buffer, 0, (int)stream.Length);
 
@@ -563,7 +563,7 @@ namespace mNetworkLibrary
 
 			}
 			int bufferSize = buffer.Length;
-			Debug.Log (bufferSize);
+			//Debug.Log (bufferSize);
 			if (peerType != mNetworkPeerType.dedicatedServer) {
 				NetworkTransport.Send (clientSocketId, clientConnectionId, sendChannelID, buffer, bufferSize, out error);
 			}
