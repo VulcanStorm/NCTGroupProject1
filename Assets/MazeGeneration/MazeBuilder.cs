@@ -22,7 +22,7 @@ public class MazeBuilder : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-
+		singleton = this;
 	}
 	
 	// Update is called once per frame
@@ -35,19 +35,16 @@ public class MazeBuilder : MonoBehaviour {
 		wallHeight = nWallHeight;
 	}
 
-	void CreateMazeWorld (Vector3 center, MazeTile[,] rawData){
-			
+	public void CreateMazeWorld (Vector3 center, MazeTile[,] rawData){
+
 		mazeToGen = rawData;
-		mazeToGen [0, 0].tileType = MazeTileType.wall;
-		Debug.Log (mazeToGen [0, 0].tileType);
-		Debug.Log (rawData [0, 0].tileType);
 			
 		// create a new array
 
 		worldSize = new Vector2(rawData.GetLength(0),rawData.GetLength(1));
 		worldXSizeInt = (int)worldSize.x;
 		worldYSizeInt = (int)worldSize.y;
-		WorldController.singleton.chunkSize = chunkSize;
+		//WorldController.singleton.chunkSize = chunkSize;
 
 		// create the world chunk array
 		// get the sizes for the array
@@ -60,6 +57,7 @@ public class MazeBuilder : MonoBehaviour {
 
 		// we know the x and y size of the chunk, so get the position in the bottom left corner
 		Vector3 leftCornerPos = center - new Vector3 (worldSize.x/2, 0, worldSize.y/2);
+		leftCornerPos *= tileWidth;
 		// each chunk can then be offset from this corner position
 
 
@@ -70,7 +68,7 @@ public class MazeBuilder : MonoBehaviour {
 				GameObject newChunk =  (GameObject)Instantiate(chunkPrefab,Vector3.zero,Quaternion.identity);
 				// set the position
 				worldChunks[i,j] = newChunk.GetComponent<WorldChunk>();
-				worldChunks[i,j].SetChunk(new Vector3(i*chunkSize,0,j*chunkSize)+leftCornerPos,i,j);
+				worldChunks[i,j].SetChunk(new Vector3(i*chunkSize*tileWidth,0,j*chunkSize*tileWidth)+leftCornerPos,i,j);
 				if(worldContainer != null){
 					newChunk.transform.parent = worldContainer;
 				}
@@ -107,8 +105,8 @@ public class MazeBuilder : MonoBehaviour {
 		newMesh.name = ("Chunk_"+x+","+y);*/
 		
 		// setup the tile height variables for the walls
-		short nextTileHeight = 0;
-		short currentTileHeight = 0;
+		float nextTileHeight = 0;
+
 		
 		#region FLOOR
 		
@@ -145,43 +143,95 @@ public class MazeBuilder : MonoBehaviour {
 				// calculate the world array coordinates
 				int worldXCoord = i+startXPos;
 				int worldYCoord = j+startYPos;
-				// TODO build in a floor
-					// calculate the position of this tile,relative to the chunk
-					// create the local position, so that the centre of the chunk is in the origin of the object
-					Vector3 tilePos = new Vector3(i-(chunkSize/2),chunk.position.y,j-(chunkSize/2));
+				// calculate the position of this tile,relative to the chunk
+				// create the local position, so that the centre of the chunk is in the origin of the object
+				Vector3 tilePos = new Vector3(i-(chunkSize/2),chunk.position.y,j-(chunkSize/2));
+				tilePos *=tileWidth;
 
-					// check if this is a wall tile, if so, add the wall height
-					if(mazeToGen[i,j].tileType == MazeTileType.wall){
-						tilePos.y += wallHeight;
-					}
-					
-					// draw a floor and ceiling face here
-					Vector3[] newVerts = new Vector3[8];
+
+				// check if this is a wall tile, if so, add the wall height
+				if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.floor){
+
+					Vector3[] newVerts;
+					int[] newTris;
+
+					switch(mazeToGen[worldXCoord,worldYCoord].feature){
+
+					default:
+					// draw floor face
+					newVerts = new Vector3[8];
 					newVerts[0] = new Vector3(0,0,0)+tilePos;
-					newVerts[1] = new Vector3(0,0,1)+tilePos;
-					newVerts[2] = new Vector3(1,0,1)+tilePos;
-					newVerts[3] = new Vector3(1,0,0)+tilePos;
+					newVerts[1] = new Vector3(0,0,1*tileWidth)+tilePos;
+					newVerts[2] = new Vector3(1*tileWidth,0,1*tileWidth)+tilePos;
+					newVerts[3] = new Vector3(1*tileWidth,0,0)+tilePos;
 
-					newVerts[4] = new Vector3(0,-floorThickness,0)+tilePos;
-					newVerts[5] = new Vector3(0,-floorThickness,1)+tilePos;
-					newVerts[6] = new Vector3(1,-floorThickness,1)+tilePos;
-					newVerts[7] = new Vector3(1,-floorThickness,0)+tilePos;
+					// draw ceiling face
+					newVerts[4] = new Vector3(0,wallHeight,0)+tilePos;
+					newVerts[5] = new Vector3(0,wallHeight,1*tileWidth)+tilePos;
+					newVerts[6] = new Vector3(1*tileWidth,wallHeight,1*tileWidth)+tilePos;
+					newVerts[7] = new Vector3(1*tileWidth,wallHeight,0)+tilePos;
 					
-					int[] newTris = new int[6];
+					newTris = new int[12];
+					// create floor triangles
 					newTris[0] = 0+verts.Count;
 					newTris[1] = 1+verts.Count;
 					newTris[2] = 2+verts.Count;
 					newTris[3] = 0+verts.Count;
 					newTris[4] = 2+verts.Count;
 					newTris[5] = 3+verts.Count;
+					
+					// create ceiling triangles
+					newTris[6] = 6+verts.Count;
+					newTris[7] = 5+verts.Count;
+					newTris[8] = 4+verts.Count;
+					newTris[9] = 7+verts.Count;
+					newTris[10] = 6+verts.Count;
+					newTris[11] = 4+verts.Count;
+					
+					
+					break;
 
-					newTris[6] = 2+verts.Count;
-					newTris[7] = 1+verts.Count;
-					newTris[8] = 0+verts.Count;
-					newTris[9] = 3+verts.Count;
-					newTris[10] = 2+verts.Count;
-					newTris[11] = 0+verts.Count;
 
+					case MazeTileFeature.startTile:
+						// draw floor face
+						newVerts = new Vector3[4];
+						newVerts[0] = new Vector3(0,0,0)+tilePos;
+						newVerts[1] = new Vector3(0,0,1*tileWidth)+tilePos;
+						newVerts[2] = new Vector3(1*tileWidth,0,1*tileWidth)+tilePos;
+						newVerts[3] = new Vector3(1*tileWidth,0,0)+tilePos;
+						// draw the ceiling walls for dropping down
+
+						newTris = new int[12];
+						// create floor triangles
+						newTris[0] = 0+verts.Count;
+						newTris[1] = 1+verts.Count;
+						newTris[2] = 2+verts.Count;
+						newTris[3] = 0+verts.Count;
+						newTris[4] = 2+verts.Count;
+						newTris[5] = 3+verts.Count;
+
+						break;
+
+					case MazeTileFeature.endTile:
+						// don't draw a floor, just a ceiling
+
+						// draw ceiling face
+						newVerts = new Vector3[4];
+						newVerts[0] = new Vector3(0,wallHeight,0)+tilePos;
+						newVerts[1] = new Vector3(0,wallHeight,1*tileWidth)+tilePos;
+						newVerts[2] = new Vector3(1*tileWidth,wallHeight,1*tileWidth)+tilePos;
+						newVerts[3] = new Vector3(1*tileWidth,wallHeight,0)+tilePos;
+
+						newTris = new int[6];
+						// create ceiling triangles
+						newTris[0] = 2+verts.Count;
+						newTris[1] = 1+verts.Count;
+						newTris[2] = 0+verts.Count;
+						newTris[3] = 3+verts.Count;
+						newTris[4] = 2+verts.Count;
+						newTris[5] = 0+verts.Count;
+						break;
+					}
 					for(int n=0;n<newVerts.Length;n++){
 						verts.Add(newVerts[n]);	
 					}
@@ -189,10 +239,13 @@ public class MazeBuilder : MonoBehaviour {
 					for(int n=0;n<newTris.Length;n++){
 						tris.Add(newTris[n]);
 					}
+				}
+
+
 			}
 		}
-		
-		
+
+
 		
 		// now optimise this
 		RemoveDuplicateVertices(ref verts, ref tris);
@@ -202,9 +255,9 @@ public class MazeBuilder : MonoBehaviour {
 		}
 		
 		#endregion
-		/*
+
 		#region WALLS
-		
+
 		// draw the walls down
 		for(int i=0;i<endXChunk;i++){
 			for(int j=0;j<endYChunk;j++){
@@ -214,42 +267,54 @@ public class MazeBuilder : MonoBehaviour {
 				int worldYCoord = j+startYPos;
 				
 				// set our tile pos
-				Vector3 tilePos = new Vector3(i-(chunkSize/2),world[worldXCoord,worldYCoord].height,j-(chunkSize/2));
+				Vector3 tilePos = new Vector3(i-(chunkSize/2),chunk.position.y,j-(chunkSize/2));
+				tilePos *=tileWidth;
 				// 	1------2
 				//	|	   |
 				//	|	   |
 				//	0------3
-				// determine if the neighbours are below us
-				// dont bother building edges up, since we can just build them down
-				
-				// get our current height
-				currentTileHeight = world[worldXCoord,worldYCoord].height;
+				// only place walls around our wall neighbours
+
 				
 				#region UPPER TILE
-				// create the upper tile pos
+				// get the upper tile pos
 				Vector2 upperTilePos = new Vector2(worldXCoord,worldYCoord+1);
 				
-				//short nextTileHeight = 0;
+
 				// check for out of bounds
 				if(OutOfBounds(upperTilePos) == false){
-					nextTileHeight = world[(int)upperTilePos.x,(int)upperTilePos.y].height;
+					// check if this tile is a floor tile, and the upper tile isnt a floor tile
+					if((mazeToGen[(int)upperTilePos.x,(int)upperTilePos.y].tileType == MazeTileType.floor) || (mazeToGen[worldXCoord,worldYCoord].tileType != MazeTileType.floor)){
+						// hence no tile height
+						nextTileHeight = 0;
+					}
+					else{
+						// found a wall, so we want a wall here
+						nextTileHeight = wallHeight;
+					}
 				}
-				else{
+				// we're on the edge, so check if we are a wall
+				else if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.wall){
+					// edge of the map, we don't want a wall here
 					nextTileHeight = 0;
 				}
+				// always default to building a wall
+				else{
+					nextTileHeight = wallHeight;
+				}
 				
-				// check if the tile is lower than us
-				if(nextTileHeight < currentTileHeight){
+				// check if the tile height is above us, since we only build walls up
+				if(nextTileHeight != 0){
 					
 					// we have found a tile that is lower than us...
 					// create some walls down
 					
 					// create the vertices
 					Vector3[] newVerts = new Vector3[4];
-					newVerts[0] = new Vector3(1,0,1)+tilePos;
-					newVerts[1] = new Vector3(0,0,1)+tilePos;
-					newVerts[2] = new Vector3(0,nextTileHeight-currentTileHeight,1)+tilePos;
-					newVerts[3] = new Vector3(1,nextTileHeight-currentTileHeight,1)+tilePos;
+					newVerts[0] = new Vector3(1*tileWidth,0,1*tileWidth)+tilePos;
+					newVerts[1] = new Vector3(0,0,1*tileWidth)+tilePos;
+					newVerts[2] = new Vector3(0,nextTileHeight,1*tileWidth)+tilePos;
+					newVerts[3] = new Vector3(1*tileWidth,nextTileHeight,1*tileWidth)+tilePos;
 					
 					// create the triangles
 					int[] newTris = new int[6];
@@ -280,17 +345,31 @@ public class MazeBuilder : MonoBehaviour {
 				#region DOWN TILE
 				// create the down tile pos
 				Vector2 downTilePos = new Vector2(worldXCoord,worldYCoord-1);
-				
+
 				// check for out of bounds
 				if(OutOfBounds(downTilePos) == false){
-					nextTileHeight = world[(int)downTilePos.x,(int)downTilePos.y].height;
+					// 
+					if((mazeToGen[(int)downTilePos.x,(int)downTilePos.y].tileType == MazeTileType.floor) || (mazeToGen[worldXCoord,worldYCoord].tileType != MazeTileType.floor)){
+						// hence no tile height
+						nextTileHeight = 0;
+					}
+					else{
+						// found a wall, so we want a wall here
+						nextTileHeight = wallHeight;
+					}
 				}
-				else{
+				// we're on the edge, so check if we are a wall
+				else if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.wall){
+					// edge of the map, we don't want a wall here
 					nextTileHeight = 0;
 				}
+				// always default to building a wall
+				else{
+					nextTileHeight = wallHeight;
+				}
 				
-				// check if the tile is lower than us
-				if(nextTileHeight < currentTileHeight){
+				// check if the tile height is above us, since we only build walls up
+				if(nextTileHeight !=0){
 					
 					// we have found a tile that is lower than us...
 					// create some walls down
@@ -298,9 +377,9 @@ public class MazeBuilder : MonoBehaviour {
 					// create the vertices
 					Vector3[] newVerts = new Vector3[4];
 					newVerts[0] = new Vector3(0,0,0)+tilePos;
-					newVerts[1] = new Vector3(1,0,0)+tilePos;
-					newVerts[2] = new Vector3(1,nextTileHeight-currentTileHeight,0)+tilePos;
-					newVerts[3] = new Vector3(0,nextTileHeight-currentTileHeight,0)+tilePos;
+					newVerts[1] = new Vector3(1*tileWidth,0,0)+tilePos;
+					newVerts[2] = new Vector3(1*tileWidth,nextTileHeight,0)+tilePos;
+					newVerts[3] = new Vector3(0,nextTileHeight,0)+tilePos;
 					
 					// create the triangles
 					int[] newTris = new int[6];
@@ -327,31 +406,45 @@ public class MazeBuilder : MonoBehaviour {
 				} 
 				
 				#endregion
-				
+
 				#region LEFT TILE
-				// create the upper tile pos
+				// create the left tile pos
 				Vector2 leftTilePos = new Vector2(worldXCoord-1,worldYCoord);
 				
 				// check for out of bounds
 				if(OutOfBounds(leftTilePos) == false){
-					nextTileHeight = world[(int)leftTilePos.x,(int)leftTilePos.y].height;
+					// 
+					if((mazeToGen[(int)leftTilePos.x,(int)leftTilePos.y].tileType == MazeTileType.floor) || (mazeToGen[worldXCoord,worldYCoord].tileType != MazeTileType.floor)){
+						// hence no tile height
+						nextTileHeight = 0;
+					}
+					else{
+						// found a wall, so we want a wall here
+						nextTileHeight = wallHeight;
+					}
 				}
-				else{
+				// we're on the edge, so check if we are a wall
+				else if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.wall){
+					// edge of the map, we don't want a wall here
 					nextTileHeight = 0;
 				}
+				// always default to building a wall
+				else{
+					nextTileHeight = wallHeight;
+				}
 				
-				// check if the tile is lower than us
-				if(nextTileHeight < currentTileHeight){
+				// check if the tile height is above us, since we only build walls up
+				if(nextTileHeight !=0){
 					
 					// we have found a tile that is lower than us...
 					// create some walls down
 					
 					// create the vertices
 					Vector3[] newVerts = new Vector3[4];
-					newVerts[0] = new Vector3(0,0,1)+tilePos;
+					newVerts[0] = new Vector3(0,0,1*tileWidth)+tilePos;
 					newVerts[1] = new Vector3(0,0,0)+tilePos;
-					newVerts[2] = new Vector3(0,nextTileHeight-currentTileHeight,0)+tilePos;
-					newVerts[3] = new Vector3(0,nextTileHeight-currentTileHeight,1)+tilePos;
+					newVerts[2] = new Vector3(0,nextTileHeight,0)+tilePos;
+					newVerts[3] = new Vector3(0,nextTileHeight,1*tileWidth)+tilePos;
 					
 					// create the triangles
 					int[] newTris = new int[6];
@@ -378,31 +471,45 @@ public class MazeBuilder : MonoBehaviour {
 				} 
 				
 				#endregion
-				
+
 				#region RIGHT TILE
-				// create the upper tile pos
+				// create the right tile pos
 				Vector2 rightTilePos = new Vector2(worldXCoord+1,worldYCoord);
 				
 				// check for out of bounds
 				if(OutOfBounds(rightTilePos) == false){
-					nextTileHeight = world[(int)rightTilePos.x,(int)rightTilePos.y].height;
+					// 
+					if((mazeToGen[(int)rightTilePos.x,(int)rightTilePos.y].tileType == MazeTileType.floor) || (mazeToGen[worldXCoord,worldYCoord].tileType != MazeTileType.floor)){
+						// hence no tile height
+						nextTileHeight = 0;
+					}
+					else{
+						// found a wall, so we want a wall here
+						nextTileHeight = wallHeight;
+					}
 				}
-				else{
+				// we're on the edge, so check if we are a wall
+				else if(mazeToGen[worldXCoord,worldYCoord].tileType == MazeTileType.wall){
+					// edge of the map, we don't want a wall here
 					nextTileHeight = 0;
 				}
+				// always default to building a wall
+				else{
+					nextTileHeight = wallHeight;
+				}
 				
-				// check if the tile is lower than us
-				if(nextTileHeight < currentTileHeight){
+				// check if the tile height is above us, since we only build walls up
+				if(nextTileHeight !=0){
 					
 					// we have found a tile that is lower than us...
 					// create some walls down
 					
 					// create the vertices
 					Vector3[] newVerts = new Vector3[4];
-					newVerts[0] = new Vector3(1,0,0)+tilePos;
-					newVerts[1] = new Vector3(1,0,1)+tilePos;
-					newVerts[2] = new Vector3(1,nextTileHeight-currentTileHeight,1)+tilePos;
-					newVerts[3] = new Vector3(1,nextTileHeight-currentTileHeight,0)+tilePos;
+					newVerts[0] = new Vector3(1*tileWidth,0,0)+tilePos;
+					newVerts[1] = new Vector3(1*tileWidth,0,1*tileWidth)+tilePos;
+					newVerts[2] = new Vector3(1*tileWidth,nextTileHeight,1*tileWidth)+tilePos;
+					newVerts[3] = new Vector3(1*tileWidth,nextTileHeight,0)+tilePos;
 					
 					// create the triangles
 					int[] newTris = new int[6];
@@ -429,13 +536,14 @@ public class MazeBuilder : MonoBehaviour {
 					}
 					
 				} 
-				
+
 				#endregion
+
 			}
 		}
-		
+
 		#endregion
-		*/
+
 		
 		// finally write this mesh data back to the chunk, so it can be rendered
 		//RemoveDuplicateVertices(ref verts, ref tris, ref uvs);
@@ -552,6 +660,30 @@ public class MazeBuilder : MonoBehaviour {
 				worldChunks[i,j].DestroyChunk();
 				worldChunks[i,j] = null;
 			}
+		}
+	}
+
+	bool OutOfBounds (Vector2 pos) {
+		if(pos.x < 0 || pos.x >= worldSize.x){
+			return true;
+		}
+		else if(pos.y < 0 || pos.y >= worldSize.y){
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
+	
+	bool OutOfBounds (int x, int y) {
+		if(x < 0 || x >= worldSize.x){
+			return true;
+		}
+		else if(y < 0 || y >= worldSize.y){
+			return true;
+		}
+		else{
+			return false;
 		}
 	}
 }
