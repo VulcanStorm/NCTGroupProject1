@@ -3,14 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using mNetworkLibrary;
 
-public class MazeManager : MonoBehaviour {
+public class MazeManager : MonoBehaviour
+{
 
 	public static MazeManager singleton;
 
 	public int minIslandSize = 2;
 
 	public bool mazeDone {
-		get{
+		get {
 			return _mazeDone;
 		}
 		private set {
@@ -18,6 +19,7 @@ public class MazeManager : MonoBehaviour {
 		}
 
 	}
+
 	private bool _mazeDone;
 
 	// final maze gen data
@@ -26,6 +28,8 @@ public class MazeManager : MonoBehaviour {
 	MazeTileGenData[,] maze;
 
 
+	public Vector2[] samplePyramidFloorSizes;
+	MazeFloorData[] pyramidFloors;
 
 	LinkedList<Vector2> emptyTiles = new LinkedList<Vector2> ();
 
@@ -39,8 +43,10 @@ public class MazeManager : MonoBehaviour {
 	
 	static Vector2[] allDir;
 
+
 	// Use this for initialization
-	void Start () {
+	void Start ()
+	{
 		singleton = this;
 		// set the lookup directions
 		lookupDir = new Vector2[4];
@@ -60,11 +66,77 @@ public class MazeManager : MonoBehaviour {
 		allDir [7] = new Vector2 (-1, -1);// down left
 
 		// TODO change this
-		GeneratePracticeMaze (new Vector2(20,20));
+		StartCoroutine (DoPyramidGen (Vector3.zero, 4, samplePyramidFloorSizes));
 
 	}
 
-	void GeneratePracticeMaze (Vector2 size) {
+
+	IEnumerator DoPyramidGen (Vector3 topFloorCenter, float totalFloorHeight, Vector2[] floorSizes)
+	{
+
+		// generate random starting coords
+		pos = Vector2.zero;
+		pos.x = (int)Random.Range (0, mazeSize.x);
+		pos.y = (int)Random.Range (0, mazeSize.y);
+
+
+
+		// create the floor array
+		pyramidFloors = new MazeFloorData[floorSizes.Length];
+		// iterate over all the floors, 
+		for (int n = 0; n < pyramidFloors.Length; n++) {
+			
+
+			// reset the maze gen variables
+			mazeSize = floorSizes [n];
+			// create a new maze to use when generating
+			maze = new MazeTileGenData[(int)mazeSize.x, (int)mazeSize.y];
+			for (int i = 0; i < maze.GetLength (0); i++) {
+				for (int j = 0; j < maze.GetLength (1); j++) {
+					maze [i, j].pos = new Vector2 (i, j);
+					maze [i, j].isVisited = false;
+				}
+			}
+			// being the maze gen routine
+			StartCoroutine (RunRecurseBackTrack3 ());
+			// set this floors center
+			pyramidFloors [n].floorCenter = topFloorCenter - Vector3.up * totalFloorHeight * n;
+
+			// we havent done this floor yet, so set it to false
+			mazeDone = false;
+			// wait for maze gen to complete
+			while (mazeDone == false) {
+				yield return new WaitForEndOfFrame ();
+			}
+
+			// set the start and end tile features
+			maze [(int)startPos.x, (int)startPos.y].feature = MazeTileFeature.startTile;
+			maze [(int)endPos.x, (int)endPos.y].feature = MazeTileFeature.endTile;
+
+			// set the new starting position
+			// calculate the offset from the previous floor
+			if (n < (pyramidFloors.Length - 1)) {
+				Vector2 offsetPos = (floorSizes [n + 1] - floorSizes [n]) * 0.5f;
+				pos = endPos + offsetPos;
+			}
+
+			// now copy the generated maze into the final maze data :)
+			pyramidFloors [n].floorData = new MazeTile[maze.GetLength (0), maze.GetLength (1)];
+
+			for (int i = 0; i < maze.GetLength (0); i++) {
+				for (int j = 0; j < maze.GetLength (1); j++) {
+					pyramidFloors [n].floorData [i, j].feature = maze [i, j].feature;
+					pyramidFloors [n].floorData [i, j].tileType = maze [i, j].type;
+				}
+			}
+			yield return new WaitForEndOfFrame ();
+			// notify the maze builder that it can create this floor
+			MazeBuilder.singleton.CreateMazeWorld (pyramidFloors [n].floorCenter, pyramidFloors [n].floorData);
+		}
+	}
+
+	void GeneratePracticeMaze (Vector2 size)
+	{
 		mazeSize = size;
 		maze = new MazeTileGenData[(int)size.x, (int)size.y];
 		for (int i = 0; i < maze.GetLength (0); i++) {
@@ -73,39 +145,49 @@ public class MazeManager : MonoBehaviour {
 				maze [i, j].isVisited = false;
 			}
 		}
-		StartCoroutine (RunRecurseBackTrack3 ());
-		StartCoroutine (WaitForPracticeMazeGen ());
-	}
 
-	IEnumerator WaitForPracticeMazeGen () {
-		while (mazeDone == false) {
-			yield return new WaitForEndOfFrame();
-		}
-		practiceMaze = new MazeTile[maze.GetLength (0), maze.GetLength (1)];
-		// set the practice maze data
-		for (int i = 0; i < maze.GetLength (0); i++) {
-			for (int j = 0; j < maze.GetLength (1); j++) {
-				practiceMaze[i,j].feature = maze[i,j].feature;
-				practiceMaze[i,j].tileType = maze[i,j].type;
-			}
-		}
-		// create the maze world
-		MazeBuilder.singleton.CreateMazeWorld (Vector3.zero,practiceMaze);
-	}
-
-	IEnumerator RunRecurseBackTrack3 () {
-		mazeDone = false;
 		// generate random starting coords
 		pos = Vector2.zero;
 		pos.x = (int)Random.Range (0, mazeSize.x);
 		pos.y = (int)Random.Range (0, mazeSize.y);
+
+		StartCoroutine (RunRecurseBackTrack3 ());
+		StartCoroutine (WaitForPracticeMazeGen ());
+	}
+
+	IEnumerator WaitForPracticeMazeGen ()
+	{
+		while (mazeDone == false) {
+			yield return new WaitForEndOfFrame ();
+		}
+		practiceMaze = new MazeTile[maze.GetLength (0), maze.GetLength (1)];
+		// set the start and end features
+		maze [(int)startPos.x, (int)startPos.y].feature = MazeTileFeature.startTile;
+		maze [(int)endPos.x, (int)endPos.y].feature = MazeTileFeature.endTile;
+		// set the practice maze data
+		for (int i = 0; i < maze.GetLength (0); i++) {
+			for (int j = 0; j < maze.GetLength (1); j++) {
+				practiceMaze [i, j].feature = maze [i, j].feature;
+				practiceMaze [i, j].tileType = maze [i, j].type;
+			}
+		}
+		yield return new WaitForEndOfFrame ();
+		// create the maze world
+		MazeBuilder.singleton.CreateMazeWorld (Vector3.zero, practiceMaze);
+	}
+
+	IEnumerator RunRecurseBackTrack3 ()
+	{
+		mazeDone = false;
+	
 		startPos = pos;
 		// set this to be a floor tile
-		maze [(int)pos.x, (int)pos.y].type= MazeTileType.floor;
+		maze [(int)pos.x, (int)pos.y].type = MazeTileType.floor;
+
 		// get the neighbours and set them all to walls to carve
 		// SetNeighboursToWalls(pos);
 		// add all the neighbours to the list of tiles to carve
-		AddNeighboursToCarve(pos);
+		AddNeighboursToCarve (pos);
 		yield return new WaitForEndOfFrame ();
 		// begin the loop
 		// keep choosing tiles from the list
@@ -126,20 +208,20 @@ public class MazeManager : MonoBehaviour {
 			// generate a valid random direction
 			while (doneLoop == false) {
 				// now pick a random direction to walk in
-				dir = directions[Random.Range (0, directions.Count)];
+				dir = directions [Random.Range (0, directions.Count)];
 				//Debug.Log("direction is:"+dir.ToString());
 				//Debug.Log ("number of directions left:" + directions.Count);
 				// get the position of the next tile in this direction
-				nextPos = pos + lookupDir[dir];
+				nextPos = pos + lookupDir [dir];
 				// remove that direction from the list
-				directions.Remove(dir);
+				directions.Remove (dir);
 				// check if this tile is in bounds
 				if (CheckInBounds (nextPos)) {
 					// now we have a valid position, check if its open, hence possibly carvable
 					MazeTileGenData nextTile = GetTile (nextPos);
 					if (nextTile.type == MazeTileType.open) {
 						// now determine if this should be a permanent wall...
-						if (CheckForPermanentWall (nextPos) == true || CheckForTTile(nextPos) == true || CheckForCornerTileAround(nextPos)) {
+						if (CheckForPermanentWall (nextPos) == true || CheckForTTile (nextPos) == true || CheckForCornerTileAround (nextPos)) {
 							//Debug.Log ("creating permanent wall in direction " + dir);
 							// set this tile to be a wall
 							nextTile.type = MazeTileType.wall;
@@ -182,7 +264,7 @@ public class MazeManager : MonoBehaviour {
 				// add the empty neighbours
 				AddNeighboursToCarve (nextPos);
 				// remove this tile from the search list
-				RemovePosFromEmptyList(nextPos);
+				RemovePosFromEmptyList (nextPos);
 				// set the position of the current tile to be this tile position
 				pos = nextPos;
 				
@@ -192,7 +274,7 @@ public class MazeManager : MonoBehaviour {
 			} else {
 				// we didnt find a tile to go to... so backtrack!
 				//yield return new WaitForSeconds(0.5f);
-				Debug.Log("Dead end");
+				Debug.Log ("Dead end");
 				// remove the tile from the empty list
 				//Debug.Log("backtracking...");
 				if (emptyTiles.Count != 0) {
@@ -203,7 +285,7 @@ public class MazeManager : MonoBehaviour {
 					emptyTiles.RemoveLast ();
 					
 					// keep checking for a valid tile, since if this should be a wall, we can't go here
-					while ((CheckForPermanentWall(pos) == true || CheckForHTile(pos) == true || CheckForLineTile(pos) || CheckForCornerTileAround(pos))&& GetTile(pos).type == MazeTileType.open) {
+					while ((CheckForPermanentWall (pos) == true || CheckForHTile (pos) == true || CheckForLineTile (pos) || CheckForCornerTileAround (pos)) && GetTile (pos).type == MazeTileType.open) {
 						// set this tile to be a wall
 						maze [(int)pos.x, (int)pos.y].type = MazeTileType.wall;
 						// add all the neighbours to the search list
@@ -220,7 +302,7 @@ public class MazeManager : MonoBehaviour {
 						////UpdateMazeTileWorld ();
 						//yield return new WaitForEndOfFrame ();
 					}
-					if (CheckForPermanentWall(pos) == false) {
+					if (CheckForPermanentWall (pos) == false) {
 						// set this tile to be a floor
 						maze [(int)pos.x, (int)pos.y].type = MazeTileType.floor;
 						// add the neighbours of this tile
@@ -245,14 +327,15 @@ public class MazeManager : MonoBehaviour {
 		yield return new WaitForEndOfFrame ();
 		//Application.CaptureScreenshot(Application.dataPath+"Maze_Screenshot_after_postproc_"+mapNo+".png");
 		// place the start and exit tiles
-		StartCoroutine(PlaceStartAndExit());
+		StartCoroutine (PlaceStartAndExit ());
 		
 		yield return new WaitForEndOfFrame ();
 		
 		
 	}
 
-	IEnumerator PlaceStartAndExit () {
+	IEnumerator PlaceStartAndExit ()
+	{
 		Debug.Log ("placing start and exit");
 		////UpdateMazeTileWorld ();
 		yield return new WaitForEndOfFrame ();
@@ -260,15 +343,15 @@ public class MazeManager : MonoBehaviour {
 		
 		//posSprite.gameObject.SetActive (false);
 		// find the end position
-		List<Vector2> tilesToCheck = new List<Vector2>();
+		List<Vector2> tilesToCheck = new List<Vector2> ();
 		tilesToCheck.Add (startPos);
-		maze[(int)startPos.x,(int)startPos.y].prevTilePos = startPos;
+		maze [(int)startPos.x, (int)startPos.y].prevTilePos = startPos;
 		List<Vector2> nextTiles = new List<Vector2> ();
 		
 		while (tilesToCheck.Count != 0) {
 			//yield return new WaitForEndOfFrame ();
 			// flood fill
-			while(tilesToCheck.Count != 0) {
+			while (tilesToCheck.Count != 0) {
 				// get the neighbours, add all the un-visited ones to the list
 				Vector2[] neighbours = GetValidNeighbours (tilesToCheck [0]);
 				
@@ -278,9 +361,9 @@ public class MazeManager : MonoBehaviour {
 						// set the last position found
 						endPos = neighbours [n];
 						// set the visited flag on the maze tile
-						maze[(int)neighbours[n].x,(int)neighbours[n].y].isConnectedToStart = true;
-						maze[(int)neighbours[n].x,(int)neighbours[n].y].type = MazeTileType.floor;
-						maze [(int)neighbours[n].x, (int)neighbours[n].y].prevTilePos = tilesToCheck[0];
+						maze [(int)neighbours [n].x, (int)neighbours [n].y].isConnectedToStart = true;
+						maze [(int)neighbours [n].x, (int)neighbours [n].y].type = MazeTileType.floor;
+						maze [(int)neighbours [n].x, (int)neighbours [n].y].prevTilePos = tilesToCheck [0];
 						// add this neighbour to the list to check next
 						nextTiles.Add (neighbours [n]);
 						
@@ -300,40 +383,40 @@ public class MazeManager : MonoBehaviour {
 			nextTiles.Clear ();
 			
 		}
-		Debug.Log("Merging Islands...");
+		Debug.Log ("Merging Islands...");
 		//Debug.Break ();
 		for (int i = 0; i < maze.GetLength (0); i++) {
-			for (int j = 0; j < maze.GetLength (1); j++){
-				if(maze [i, j].isConnectedToStart == false && maze[i,j].isIsland ==  false&& maze[i,j].type != MazeTileType.wall){
+			for (int j = 0; j < maze.GetLength (1); j++) {
+				if (maze [i, j].isConnectedToStart == false && maze [i, j].isIsland == false && maze [i, j].type != MazeTileType.wall) {
 					//Debug.Log("found island tile");
-					maze[i,j].isIsland = true;
+					maze [i, j].isIsland = true;
 					maze [i, j].type = MazeTileType.floor;
 					
-					List<Vector2> islandTiles = new List<Vector2>();
-					islandTiles.Add(new Vector2(i,j));
+					List<Vector2> islandTiles = new List<Vector2> ();
+					islandTiles.Add (new Vector2 (i, j));
 					// we've found an island, so fill it, and determine the size
-					tilesToCheck.Clear();
-					nextTiles.Clear();
-					tilesToCheck.Add(maze[i,j].pos);
+					tilesToCheck.Clear ();
+					nextTiles.Clear ();
+					tilesToCheck.Add (maze [i, j].pos);
 					while (tilesToCheck.Count != 0) {
 						//yield return new WaitForEndOfFrame ();
 						// flood fill
-						while(tilesToCheck.Count != 0) {
+						while (tilesToCheck.Count != 0) {
 							// get the neighbours, add all the un-visited ones to the list
 							Vector2[] neighbours = GetValidNeighbours (tilesToCheck [0]);
 							
 							// check each of the neighbours to see if it has been visited
 							for (int n = 0; n < neighbours.Length; n++) {
-								if (GetTile (neighbours [n]).isIsland == false && GetTile(neighbours[n]).isConnectedToStart == false && GetTile (neighbours [n]).type != MazeTileType.wall) {
+								if (GetTile (neighbours [n]).isIsland == false && GetTile (neighbours [n]).isConnectedToStart == false && GetTile (neighbours [n]).type != MazeTileType.wall) {
 									// set the last position found
 									endPos = neighbours [n];
 									// set the visited flag on the maze tile
-									maze[(int)neighbours[n].x,(int)neighbours[n].y].isIsland = true;
+									maze [(int)neighbours [n].x, (int)neighbours [n].y].isIsland = true;
 									// this is also a floor, since we can have islands of unvisited tiles
-									maze[(int)neighbours[n].x,(int)neighbours[n].y].type = MazeTileType.floor;
+									maze [(int)neighbours [n].x, (int)neighbours [n].y].type = MazeTileType.floor;
 									// add this neighbour to the list to check next
 									nextTiles.Add (neighbours [n]);
-									islandTiles.Add(neighbours[n]);
+									islandTiles.Add (neighbours [n]);
 								}
 							}
 							
@@ -354,23 +437,23 @@ public class MazeManager : MonoBehaviour {
 					
 					//Debug.Log ("found island of "+islandTiles.Count+" tiles");
 					// check for large islands
-					if(islandTiles.Count > minIslandSize){
+					if (islandTiles.Count > minIslandSize) {
 						//Debug.Log ("checking for way back in...");
 						// now check all the neighbours of these island tiles
 						bool foundConnection = false;
 						// and check for a common neighbour with part of the maze
-						for(int n=0;n<islandTiles.Count;n++){
+						for (int n = 0; n < islandTiles.Count; n++) {
 							// get the neighbours for this tile
-							Vector2[] currentTileNeighbours = GetValidNeighbours(islandTiles[n]);
-							for(int k=0;k<currentTileNeighbours.Length;k++){
+							Vector2[] currentTileNeighbours = GetValidNeighbours (islandTiles [n]);
+							for (int k = 0; k < currentTileNeighbours.Length; k++) {
 								// check if this tile is not a permanent wall
-								if(CheckForPermanentWall(currentTileNeighbours[k]) == false){
-									Vector2[] neighbours = GetValidNeighbours(currentTileNeighbours[k]);
+								if (CheckForPermanentWall (currentTileNeighbours [k]) == false) {
+									Vector2[] neighbours = GetValidNeighbours (currentTileNeighbours [k]);
 									
-									for(int m = 0;m<neighbours.Length;m++){
-										if(GetTile(neighbours[m]).isConnectedToStart == true){
+									for (int m = 0; m < neighbours.Length; m++) {
+										if (GetTile (neighbours [m]).isConnectedToStart == true) {
 											// we found a tile to use to join the sections
-											maze[(int)currentTileNeighbours[k].x,(int)currentTileNeighbours[k].y].type = MazeTileType.floor;
+											maze [(int)currentTileNeighbours [k].x, (int)currentTileNeighbours [k].y].type = MazeTileType.floor;
 											maze [(int)currentTileNeighbours [k].x, (int)currentTileNeighbours [k].y].isConnectedToStart = true;
 											//Debug.Log("Found way back in!");	
 											// stop the loops
@@ -381,8 +464,8 @@ public class MazeManager : MonoBehaviour {
 											
 											// turn these island tiles back to part of the maze
 											for (int a = 0; a < islandTiles.Count; a++) {
-												maze[(int)islandTiles[a].x,(int)islandTiles[a].y].isIsland = false;
-												maze[(int)islandTiles[a].x,(int)islandTiles[a].y].isConnectedToStart = true;
+												maze [(int)islandTiles [a].x, (int)islandTiles [a].y].isIsland = false;
+												maze [(int)islandTiles [a].x, (int)islandTiles [a].y].isConnectedToStart = true;
 											}
 											//UpdateMazeTileWorld ();
 											//yield return new WaitForEndOfFrame();
@@ -396,28 +479,28 @@ public class MazeManager : MonoBehaviour {
 						
 						if (foundConnection == false) {
 							//Debug.Log ("Didn't find a way back in, looking for a new island to merge with");
-							for(int n=0;n<islandTiles.Count;n++){
+							for (int n = 0; n < islandTiles.Count; n++) {
 								// get the neighbours for this tile
-								Vector2[] currentTileNeighbours = GetValidNeighbours(islandTiles[n]);
-								for(int k=0;k<currentTileNeighbours.Length;k++){
+								Vector2[] currentTileNeighbours = GetValidNeighbours (islandTiles [n]);
+								for (int k = 0; k < currentTileNeighbours.Length; k++) {
 									// check if this tile is not a permanent wall
-									if(CheckForPermanentWall(currentTileNeighbours[k]) == false){
-										Vector2[] neighbours = GetValidNeighbours(currentTileNeighbours[k]);
+									if (CheckForPermanentWall (currentTileNeighbours [k]) == false) {
+										Vector2[] neighbours = GetValidNeighbours (currentTileNeighbours [k]);
 										
-										for(int m = 0;m<neighbours.Length;m++){
-											if(GetTile(neighbours[m]).type == MazeTileType.floor && GetTile(neighbours[m]).isIsland == false && GetTile(neighbours[m]).isConnectedToStart == false){
+										for (int m = 0; m < neighbours.Length; m++) {
+											if (GetTile (neighbours [m]).type == MazeTileType.floor && GetTile (neighbours [m]).isIsland == false && GetTile (neighbours [m]).isConnectedToStart == false) {
 												//Debug.Log ("Merging 2 islands...");
 												//Debug.Break ();
 												// we found a tile to use to join the sections
-												maze[(int)currentTileNeighbours[k].x,(int)currentTileNeighbours[k].y].type = MazeTileType.floor;
+												maze [(int)currentTileNeighbours [k].x, (int)currentTileNeighbours [k].y].type = MazeTileType.floor;
 												//maze[(int)currentTileNeighbours[k].x,(int)currentTileNeighbours[k].y].isIsland = true;
 												// stop the loop!
-												m=neighbours.Length;
+												m = neighbours.Length;
 												n = islandTiles.Count;
-												k=currentTileNeighbours.Length;
+												k = currentTileNeighbours.Length;
 												// turn these old island tiles back to empty
 												for (int a = 0; a < islandTiles.Count; a++) {
-													maze[(int)islandTiles[a].x,(int)islandTiles[a].y].isIsland = false;
+													maze [(int)islandTiles [a].x, (int)islandTiles [a].y].isIsland = false;
 													
 												}
 												// go back 1 space, and retry
@@ -445,22 +528,22 @@ public class MazeManager : MonoBehaviour {
 		
 		
 		for (int i = 0; i < maze.GetLength (0); i++) {
-			for (int j = 0; j < maze.GetLength (1); j++){
+			for (int j = 0; j < maze.GetLength (1); j++) {
 				maze [i, j].isConnectedToStart = false;
 			}
 		}
 		//UpdateMazeTileWorld();
-		yield return new WaitForEndOfFrame();
+		yield return new WaitForEndOfFrame ();
 		
 		// reset for another search from the start
-		tilesToCheck.Clear();
-		nextTiles.Clear();
+		tilesToCheck.Clear ();
+		nextTiles.Clear ();
 		tilesToCheck.Add (startPos);
 		// rescan the maze for the next furthest tile, since this might have changed when we merged the islands
 		while (tilesToCheck.Count != 0) {
 			//yield return new WaitForEndOfFrame ();
 			// flood fill
-			while(tilesToCheck.Count != 0) {
+			while (tilesToCheck.Count != 0) {
 				// get the neighbours, add all the un-visited ones to the list
 				Vector2[] neighbours = GetValidNeighbours (tilesToCheck [0]);
 				
@@ -470,9 +553,9 @@ public class MazeManager : MonoBehaviour {
 						// set the last position found
 						endPos = neighbours [n];
 						// set the visited flag on the maze tile
-						maze[(int)neighbours[n].x,(int)neighbours[n].y].isConnectedToStart = true;
-						maze[(int)neighbours[n].x,(int)neighbours[n].y].isIsland = false;
-						maze [(int)neighbours[n].x, (int)neighbours[n].y].prevTilePos = tilesToCheck[0];
+						maze [(int)neighbours [n].x, (int)neighbours [n].y].isConnectedToStart = true;
+						maze [(int)neighbours [n].x, (int)neighbours [n].y].isIsland = false;
+						maze [(int)neighbours [n].x, (int)neighbours [n].y].prevTilePos = tilesToCheck [0];
 						// add this neighbour to the list to check next
 						nextTiles.Add (neighbours [n]);
 						
@@ -497,18 +580,18 @@ public class MazeManager : MonoBehaviour {
 		//Debug.Log ("placed start and end positions");
 		
 		for (int i = 0; i < maze.GetLength (0); i++) {
-			for (int j = 0; j < maze.GetLength (1); j++){
+			for (int j = 0; j < maze.GetLength (1); j++) {
 				maze [i, j].isConnectedToStart = false;
 			}
 		}
 		//UpdateMazeTileWorld();
-		yield return new WaitForEndOfFrame();
+		yield return new WaitForEndOfFrame ();
 		//Application.CaptureScreenshot(Application.dataPath+"Maze_Screenshot_"+mapNo+".png");
 		// run backwards and highlight from start to finish
-		Vector2 prevTilePos = GetTile(endPos).prevTilePos;
+		Vector2 prevTilePos = GetTile (endPos).prevTilePos;
 		while (prevTilePos != startPos) {
 			// set this as connected to start
-			maze[(int)prevTilePos.x,(int)prevTilePos.y].isConnectedToStart = true;
+			maze [(int)prevTilePos.x, (int)prevTilePos.y].isConnectedToStart = true;
 			// set the new previous tile position
 			prevTilePos = GetTile (prevTilePos).prevTilePos;
 			//UpdateMazeTileWorld();
@@ -520,7 +603,7 @@ public class MazeManager : MonoBehaviour {
 		// take a picture of the map
 		//Application.CaptureScreenshot(Application.dataPath+"Maze_Screenshot_solved_"+mapNo+".png");
 		for (int i = 0; i < maze.GetLength (0); i++) {
-			for (int j = 0; j < maze.GetLength (1); j++){
+			for (int j = 0; j < maze.GetLength (1); j++) {
 				maze [i, j].isConnectedToStart = false;
 			}
 		}
@@ -528,6 +611,8 @@ public class MazeManager : MonoBehaviour {
 		// mark the start and end tile features
 		maze [(int)startPos.x, (int)startPos.y].feature = MazeTileFeature.startTile;
 		maze [(int)endPos.x, (int)endPos.y].feature = MazeTileFeature.endTile;
+		Debug.Log ("start tile is at " + startPos);
+		Debug.Log ("end tile is at " + endPos);
 		StartCoroutine (HighlightDeadEnds ());
 		
 	}
@@ -535,18 +620,19 @@ public class MazeManager : MonoBehaviour {
 	/// <summary>
 	/// Highlights the dead ends in the maze. Sets the boolean for "dead end" in the maze data.
 	/// </summary>
-	IEnumerator HighlightDeadEnds () {
-		for (int i = 0; i < maze.GetLength(0); i++) {
-			for (int j = 0; j < maze.GetLength(1); j++) {
+	IEnumerator HighlightDeadEnds ()
+	{
+		for (int i = 0; i < maze.GetLength (0); i++) {
+			for (int j = 0; j < maze.GetLength (1); j++) {
 				// check if this tile is connected to the start
-				if (maze [i, j].isIsland == false && maze[i,j].type == MazeTileType.floor) {
+				if (maze [i, j].isIsland == false && maze [i, j].type == MazeTileType.floor) {
 					
 					// get all the floor neighbours
-					Vector2[] floorNeighbours = GetAllFloorNeighbours(maze[i,j].pos);
+					Vector2[] floorNeighbours = GetAllFloorNeighbours (maze [i, j].pos);
 					// set us to be a dead end
 					if (floorNeighbours.Length == 1) {
 						maze [i, j].isDeadEnd = true;
-						maze[i,j].feature = MazeTileFeature.deadEndTile;
+						maze [i, j].feature = MazeTileFeature.deadEndTile;
 						//UpdateMazeTileWorld ();
 						//yield return new WaitForEndOfFrame ();
 						Vector3 lastPos;
@@ -566,9 +652,9 @@ public class MazeManager : MonoBehaviour {
 							
 						}
 						// check if this is an alcove, not a dead end
-						if(deadEndPassageLength ==0){
+						if (deadEndPassageLength == 0) {
 							// this is an alcove, so mark the feature as one
-							maze[i,j].feature = MazeTileFeature.alcove;
+							maze [i, j].feature = MazeTileFeature.alcove;
 						}
 						// the last position we checked isnt part of the dead end, so remove it
 						maze [(int)lastPos.x, (int)lastPos.y].isDeadEnd = false;
@@ -590,7 +676,8 @@ public class MazeManager : MonoBehaviour {
 		mazeDone = true;
 	}
 
-	void ValidateMaze () {
+	void ValidateMaze ()
+	{
 		// post process the maze
 		// find any open tiles that are left, and highlight them
 		// find any walls that haven't been added, and add those
@@ -598,9 +685,9 @@ public class MazeManager : MonoBehaviour {
 		MazeTileGenData tile;
 		for (int i = 0; i < mazeSize.x; i++) {
 			for (int j = 0; j < mazeSize.y; j++) {
-				tile = GetTile(new Vector2(i,j));
+				tile = GetTile (new Vector2 (i, j));
 				// check for permanent walls
-				if(tile.pos != startPos){
+				if (tile.pos != startPos) {
 					if ((CheckForPermanentWall (tile.pos) == true) || CheckForHTile (tile.pos) == true) {
 						tile.type = MazeTileType.wall;
 						SetTile (tile);
@@ -616,13 +703,14 @@ public class MazeManager : MonoBehaviour {
 		//Debug.Log ("maze validated");
 	}
 
-	void SetNeighboursToWalls(Vector2 _pos){
+	void SetNeighboursToWalls (Vector2 _pos)
+	{
 		Vector2 neighbourTilePos;
 		for (int i = 0; i < 4; i++) {
 			// get the next tile position
 			neighbourTilePos = _pos + lookupDir [i];
 			// check if its in bounds
-			if(CheckInBounds(neighbourTilePos)){
+			if (CheckInBounds (neighbourTilePos)) {
 				// check if its open
 				if (GetTile (neighbourTilePos).type == MazeTileType.open) {
 					maze [(int)_pos.x, (int)_pos.y].type = MazeTileType.wall;
@@ -630,16 +718,17 @@ public class MazeManager : MonoBehaviour {
 			}
 		}
 	}
-	
-	void AddNeighboursToCarve(Vector2 _pos){
+
+	void AddNeighboursToCarve (Vector2 _pos)
+	{
 		Vector2 neighbourTilePos;
 		for (int i = 0; i < 4; i++) {
 			// get the next tile position
 			neighbourTilePos = _pos + lookupDir [i];
 			// check if its in bounds
-			if(CheckInBounds(neighbourTilePos)){
+			if (CheckInBounds (neighbourTilePos)) {
 				// check if its not a floor
-				if (GetTile (neighbourTilePos).type == MazeTileType.open && emptyTiles.Contains(neighbourTilePos) == false) {
+				if (GetTile (neighbourTilePos).type == MazeTileType.open && emptyTiles.Contains (neighbourTilePos) == false) {
 					maze [(int)neighbourTilePos.x, (int)neighbourTilePos.y].isVisited = true;
 					
 					emptyTiles.AddLast (neighbourTilePos);
@@ -647,8 +736,9 @@ public class MazeManager : MonoBehaviour {
 			}
 		}
 	}
-	
-	public Vector2[] GetValidNeighbours(Vector2 _pos){
+
+	public Vector2[] GetValidNeighbours (Vector2 _pos)
+	{
 		List<Vector2> neighbours = new List<Vector2> ();
 		for (int i = 0; i < 4; i++) {
 			if (CheckInBounds (_pos + lookupDir [i])) {
@@ -657,8 +747,9 @@ public class MazeManager : MonoBehaviour {
 		}
 		return neighbours.ToArray ();
 	}
-	
-	public Vector2[] GetAllNonDeadEndNeighbours(Vector2 _pos, out int deadEndCount){
+
+	public Vector2[] GetAllNonDeadEndNeighbours (Vector2 _pos, out int deadEndCount)
+	{
 		List<Vector2> neighbours = new List<Vector2> ();
 		deadEndCount = 0;
 		for (int i = 0; i < 4; i++) {
@@ -675,8 +766,9 @@ public class MazeManager : MonoBehaviour {
 		}
 		return neighbours.ToArray ();
 	}
-	
-	public Vector2[] GetAllFloorNeighbours(Vector2 _pos){
+
+	public Vector2[] GetAllFloorNeighbours (Vector2 _pos)
+	{
 		List<Vector2> neighbours = new List<Vector2> ();
 		for (int i = 0; i < 4; i++) {
 			if (CheckInBounds (_pos + lookupDir [i])) {
@@ -688,23 +780,25 @@ public class MazeManager : MonoBehaviour {
 		}
 		return neighbours.ToArray ();
 	}
-	
-	void RemovePosFromEmptyList (Vector2 _pos){
+
+	void RemovePosFromEmptyList (Vector2 _pos)
+	{
 		emptyTiles.Remove (_pos);
 	}
-	
-	bool CheckForPermanentWall(Vector2 _pos){
+
+	bool CheckForPermanentWall (Vector2 _pos)
+	{
 		Vector2 t1Pos, t2Pos, t3Pos;
 		int t1Index, t2Index, t3Index;
 		
-		for(int i=0;i<4;i++){
-			t1Index = (0+(i*2))%8;
-			t2Index = (1+(i*2))%8;
-			t3Index = (2+(i*2))%8;
+		for (int i = 0; i < 4; i++) {
+			t1Index = (0 + (i * 2)) % 8;
+			t2Index = (1 + (i * 2)) % 8;
+			t3Index = (2 + (i * 2)) % 8;
 			t1Pos = _pos + allDir [t1Index];
 			t2Pos = _pos + allDir [t2Index];
 			t3Pos = _pos + allDir [t3Index];
-			if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+			if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 				if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 					return true;
 				}
@@ -713,15 +807,16 @@ public class MazeManager : MonoBehaviour {
 		}
 		return false;
 	}
+
 	
-	
-	bool CheckForCornerTileAround(Vector2 _pos){
+	bool CheckForCornerTileAround (Vector2 _pos)
+	{
 		Vector2 t1Pos, t2Pos;
 		int t1Index, t2Index;
 		
 		for (int i = 0; i < 4; i++) {
-			t1Index = (0 + (2 * i))%8;
-			t2Index = (2 + (2 * i))%8;
+			t1Index = (0 + (2 * i)) % 8;
+			t2Index = (2 + (2 * i)) % 8;
 			t1Pos = _pos + allDir [t1Index];
 			t2Pos = _pos + allDir [t2Index];
 			if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos)) {
@@ -734,20 +829,21 @@ public class MazeManager : MonoBehaviour {
 		
 		return false;
 	}
-	
-	bool CheckForHTile (Vector2 _pos){
+
+	bool CheckForHTile (Vector2 _pos)
+	{
 		// check the upper line
 		Vector2 t1Pos, t2Pos, t3Pos;
 		t1Pos = _pos + allDir [1];
 		t2Pos = _pos + allDir [2];
 		t3Pos = _pos + allDir [3];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 				// check the lower line
 				t1Pos = _pos + allDir [5];
 				t2Pos = _pos + allDir [6];
 				t3Pos = _pos + allDir [7];
-				if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+				if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 					if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 						return true;
 					}
@@ -759,13 +855,13 @@ public class MazeManager : MonoBehaviour {
 		t1Pos = _pos + allDir [0];
 		t2Pos = _pos + allDir [1];
 		t3Pos = _pos + allDir [7];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 				// check the right line
 				t1Pos = _pos + allDir [3];
 				t2Pos = _pos + allDir [4];
 				t3Pos = _pos + allDir [5];
-				if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+				if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 					if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 						return true;
 					}
@@ -777,15 +873,16 @@ public class MazeManager : MonoBehaviour {
 		
 		
 	}
-	
-	bool CheckForTTile (Vector2 _pos){
+
+	bool CheckForTTile (Vector2 _pos)
+	{
 		
 		Vector2 t1Pos, t2Pos, t3Pos;
 		// check the upper line
 		t1Pos = _pos + allDir [1];
 		t2Pos = _pos + allDir [2];
 		t3Pos = _pos + allDir [3];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 				return true;
 			}
@@ -795,7 +892,7 @@ public class MazeManager : MonoBehaviour {
 		t1Pos = _pos + allDir [5];
 		t2Pos = _pos + allDir [6];
 		t3Pos = _pos + allDir [7];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 				return true;
 			}
@@ -805,7 +902,7 @@ public class MazeManager : MonoBehaviour {
 		t1Pos = _pos + allDir [0];
 		t2Pos = _pos + allDir [1];
 		t3Pos = _pos + allDir [7];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 				return true;
 			}
@@ -815,7 +912,7 @@ public class MazeManager : MonoBehaviour {
 		t1Pos = _pos + allDir [3];
 		t2Pos = _pos + allDir [4];
 		t3Pos = _pos + allDir [5];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos) && CheckInBounds(t3Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos) && CheckInBounds (t3Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor && GetTile (t3Pos).type == MazeTileType.floor) {
 				return true;
 			}
@@ -825,14 +922,15 @@ public class MazeManager : MonoBehaviour {
 		
 		
 	}
-	
-	bool CheckForLineTile (Vector2 _pos){
+
+	bool CheckForLineTile (Vector2 _pos)
+	{
 		
 		Vector2 t1Pos, t2Pos;
 		// check the horizontal line
 		t1Pos = _pos + allDir [0];
 		t2Pos = _pos + allDir [4];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor) {
 				return true;
 			}
@@ -840,7 +938,7 @@ public class MazeManager : MonoBehaviour {
 		// check the vertical line
 		t1Pos = _pos + allDir [2];
 		t2Pos = _pos + allDir [6];
-		if(CheckInBounds(t1Pos) && CheckInBounds(t2Pos)){
+		if (CheckInBounds (t1Pos) && CheckInBounds (t2Pos)) {
 			if (GetTile (t1Pos).type == MazeTileType.floor && GetTile (t2Pos).type == MazeTileType.floor) {
 				return true;
 			}
@@ -851,15 +949,18 @@ public class MazeManager : MonoBehaviour {
 	}
 
 
-	public MazeTileGenData GetTile (Vector2 _pos){
-		return maze[(int)_pos.x,(int)_pos.y];
+	public MazeTileGenData GetTile (Vector2 _pos)
+	{
+		return maze [(int)_pos.x, (int)_pos.y];
 	}
-	
-	void SetTile (MazeTileGenData _tile){
-		maze[(int)_tile.pos.x,(int)_tile.pos.y] = _tile;
+
+	void SetTile (MazeTileGenData _tile)
+	{
+		maze [(int)_tile.pos.x, (int)_tile.pos.y] = _tile;
 	}
-	
-	bool CheckInBounds(Vector2 p){
+
+	bool CheckInBounds (Vector2 p)
+	{
 		if (p.x < 0 || p.x >= mazeSize.x || p.y < 0 || p.y >= mazeSize.y) {
 			return false;
 		} else {
