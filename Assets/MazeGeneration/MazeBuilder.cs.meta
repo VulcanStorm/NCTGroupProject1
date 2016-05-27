@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 965d77660dda9204a9492f5bb72e8a06
+timeCreated: 1464256082
+licenseType: Free
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - worldContainer: {instanceID: 0}
+  - chunkPrefab: {fileID: 173854, guid: 15784618f4c406a48860de50ab6e410b, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
