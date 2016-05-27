@@ -9,6 +9,9 @@ public class MazeBuilder : MonoBehaviour
 	public Transform worldContainer;
 	public GameObject chunkPrefab;
 
+	public Vector2 textureMapDimensions;
+	public MazeTexMapData[] textureMapCoords;
+
 	public WorldChunk[,] worldChunks = new WorldChunk[0, 0];
 	public int chunkSize = 8;
 
@@ -161,6 +164,7 @@ public class MazeBuilder : MonoBehaviour
 
 					Vector3[] newVerts = new Vector3[0];
 					int[] newTris = new int[0];
+					Vector2[] newUVs = new Vector2[0];
 
 					switch (mazeToGen [worldXCoord, worldYCoord].feature) {
 
@@ -170,25 +174,15 @@ public class MazeBuilder : MonoBehaviour
 					case MazeTileFeature.startTile:
 						Debug.Log ("Created Start Tile");
 						// draw floor face
-						newVerts = new Vector3[12];
+						newVerts = new Vector3[4];
 						newVerts [0] = new Vector3 (0, 0, 0) + tilePos;
 						newVerts [1] = new Vector3 (0, 0, 1 * tileWidth) + tilePos;
 						newVerts [2] = new Vector3 (1 * tileWidth, 0, 1 * tileWidth) + tilePos;
 						newVerts [3] = new Vector3 (1 * tileWidth, 0, 0) + tilePos;
-						// draw the ceiling walls for dropping down
 
 
-						newVerts [4] = new Vector3 (0, wallHeight, 0) + tilePos;
-						newVerts [5] = new Vector3 (0, wallHeight, 1 * tileWidth) + tilePos;
-						newVerts [6] = new Vector3 (1 * tileWidth, wallHeight, 1 * tileWidth) + tilePos;
-						newVerts [7] = new Vector3 (1 * tileWidth, wallHeight, 0) + tilePos;
 
-						newVerts [8] = new Vector3 (0, wallHeight + floorThickness, 0) + tilePos;
-						newVerts [9] = new Vector3 (0, wallHeight + floorThickness, 1 * tileWidth) + tilePos;
-						newVerts [10] = new Vector3 (1 * tileWidth, wallHeight + floorThickness, 1 * tileWidth) + tilePos;
-						newVerts [11] = new Vector3 (1 * tileWidth, wallHeight + floorThickness, 0) + tilePos;
-
-						newTris = new int[30];
+						newTris = new int[6];
 						// create floor triangles
 						newTris [0] = 0 + verts.Count;
 						newTris [1] = 1 + verts.Count;
@@ -197,40 +191,14 @@ public class MazeBuilder : MonoBehaviour
 						newTris [4] = 2 + verts.Count;
 						newTris [5] = 3 + verts.Count;
 
-						// set ceiling wall triangles...
-
-						// left wall
-						newTris [6] = 4 + verts.Count;
-						newTris [7] = 8 + verts.Count;
-						newTris [8] = 5 + verts.Count;
-						newTris [9] = 5 + verts.Count;
-						newTris [10] = 8 + verts.Count;
-						newTris [11] = 9 + verts.Count;
-
-						// upper wall
-						newTris [12] = 5 + verts.Count;
-						newTris [13] = 9 + verts.Count;
-						newTris [14] = 6 + verts.Count;
-						newTris [15] = 6 + verts.Count;
-						newTris [16] = 9 + verts.Count;
-						newTris [17] = 10 + verts.Count;
-
-						// right wall
-						newTris [18] = 6 + verts.Count;
-						newTris [19] = 10 + verts.Count;
-						newTris [20] = 7 + verts.Count;
-						newTris [21] = 7 + verts.Count;
-						newTris [22] = 10 + verts.Count;
-						newTris [23] = 11 + verts.Count;
-
-						// down wall
-						newTris [24] = 7 + verts.Count;
-						newTris [25] = 11 + verts.Count;
-						newTris [26] = 4 + verts.Count;
-						newTris [27] = 4 + verts.Count;
-						newTris [28] = 11 + verts.Count;
-						newTris [29] = 8 + verts.Count;
 				
+						// set the UVs :D
+						newUVs = new Vector2[4];
+						// tex coord 0 is floor
+						newUVs[0] = textureMapCoords[0].topLeft;
+						newUVs[1] = textureMapCoords[0].topLeft + new Vector2(0,textureMapCoords[0].size.y);
+						newUVs[2] = textureMapCoords[0].topLeft + new Vector2(textureMapCoords[0].size.x,textureMapCoords[0].size.y);
+						newUVs[3] = textureMapCoords[0].topLeft + new Vector2(textureMapCoords[0].size.x,0);
 
 						break;
 
@@ -253,6 +221,15 @@ public class MazeBuilder : MonoBehaviour
 						newTris [3] = 3 + verts.Count;
 						newTris [4] = 2 + verts.Count;
 						newTris [5] = 0 + verts.Count;
+
+						newUVs = new Vector2[4];
+
+						// tex coord 1 is ceiling
+						newUVs[0] = textureMapCoords[1].topLeft;
+						newUVs[1] = textureMapCoords[1].topLeft + new Vector2(0,textureMapCoords[0].size.y);
+						newUVs[2] = textureMapCoords[1].topLeft + new Vector2(textureMapCoords[0].size.x,textureMapCoords[0].size.y);
+						newUVs[3] = textureMapCoords[1].topLeft + new Vector2(textureMapCoords[0].size.x,0);
+
 						break;
 
 					default:
@@ -272,11 +249,11 @@ public class MazeBuilder : MonoBehaviour
 						newTris = new int[12];
 					// create floor triangles
 						newTris [0] = 0 + verts.Count;
-						newTris [1] = 1 + verts.Count;
-						newTris [2] = 2 + verts.Count;
+						newTris [1] = 2 + verts.Count;
+						newTris [2] = 3 + verts.Count;
 						newTris [3] = 0 + verts.Count;
-						newTris [4] = 2 + verts.Count;
-						newTris [5] = 3 + verts.Count;
+						newTris [4] = 1 + verts.Count;
+						newTris [5] = 2 + verts.Count;
 					
 					// create ceiling triangles
 						newTris [6] = 6 + verts.Count;
@@ -285,8 +262,19 @@ public class MazeBuilder : MonoBehaviour
 						newTris [9] = 7 + verts.Count;
 						newTris [10] = 6 + verts.Count;
 						newTris [11] = 4 + verts.Count;
-					
-					
+
+						newUVs = new Vector2[8];
+						// tex coord 0 is floor
+						newUVs[0] = textureMapCoords[0].topLeft;
+						newUVs[1] = textureMapCoords[0].topLeft + new Vector2(0,textureMapCoords[0].size.y);
+						newUVs[2] = textureMapCoords[0].topLeft + new Vector2(textureMapCoords[0].size.x,textureMapCoords[0].size.y);
+						newUVs[3] = textureMapCoords[0].topLeft + new Vector2(textureMapCoords[0].size.x,0);
+
+						// tex coord 1 is ceiling
+						newUVs[4] = textureMapCoords[1].topLeft;
+						newUVs[5] = textureMapCoords[1].topLeft + new Vector2(0,textureMapCoords[0].size.y);
+						newUVs[6] = textureMapCoords[1].topLeft + new Vector2(textureMapCoords[0].size.x,textureMapCoords[0].size.y);
+						newUVs[7] = textureMapCoords[1].topLeft + new Vector2(textureMapCoords[0].size.x,0);
 						break;
 					}
 					for (int n = 0; n < newVerts.Length; n++) {
@@ -296,8 +284,13 @@ public class MazeBuilder : MonoBehaviour
 					for (int n = 0; n < newTris.Length; n++) {
 						tris.Add (newTris [n]);
 					}
-				}
 
+					for (int n=0;n < newUVs.Length;n++){
+						newUVs[n].x = (newUVs[n].x/textureMapDimensions.x);
+						newUVs[n].y = 1-(newUVs[n].y/textureMapDimensions.y);
+						uvs.Add (newUVs[n]);
+					}
+				}
 
 			}
 		}
@@ -305,11 +298,8 @@ public class MazeBuilder : MonoBehaviour
 
 		
 		// now optimise this
-		RemoveDuplicateVertices (ref verts, ref tris);
-		// now calculate the uvs, after optimising the vertices
-		for (int i = 0; i < verts.Count; i++) {
-			uvs.Add (new Vector2 (verts [i].x, verts [i].z));
-		}
+		//RemoveDuplicateVertices (ref verts, ref tris, ref uvs);
+
 		
 		#endregion
 
@@ -332,7 +322,92 @@ public class MazeBuilder : MonoBehaviour
 				//	0------3
 				// only place walls around our wall neighbours
 
+
+				#region START TILE
+				// draw the ceiling walls for dropping down
+				if (mazeToGen [worldXCoord, worldYCoord].feature == MazeTileFeature.startTile) {
+
+					// TODO remove the shared vertices, it doesn't render nicely
+
+					// draw the start tile shaft
+					Vector3[] newVerts = new Vector3[8];
+					newVerts [0] = new Vector3 (0, wallHeight, 0) + tilePos;
+					newVerts [1] = new Vector3 (0, wallHeight, 1 * tileWidth) + tilePos;
+					newVerts [2] = new Vector3 (1 * tileWidth, wallHeight, 1 * tileWidth) + tilePos;
+					newVerts [3] = new Vector3 (1 * tileWidth, wallHeight, 0) + tilePos;
 				
+					newVerts [4] = new Vector3 (0, wallHeight + floorThickness, 0) + tilePos;
+					newVerts [5] = new Vector3 (0, wallHeight + floorThickness, 1 * tileWidth) + tilePos;
+					newVerts [6] = new Vector3 (1 * tileWidth, wallHeight + floorThickness, 1 * tileWidth) + tilePos;
+					newVerts [7] = new Vector3 (1 * tileWidth, wallHeight + floorThickness, 0) + tilePos;
+				
+					// set shaft triangles...
+
+					int[] newTris = new int[24];
+					// left wall
+					newTris [0] = 0 + verts.Count;
+					newTris [1] = 4 + verts.Count;
+					newTris [2] = 1 + verts.Count;
+					newTris [3] = 1+ verts.Count;
+					newTris [4] = 4 + verts.Count;
+					newTris [5] = 5 + verts.Count;
+					
+					// upper wall
+					newTris [6] = 1 + verts.Count;
+					newTris [7] = 5 + verts.Count;
+					newTris [8] = 2 + verts.Count;
+					newTris [9] = 2 + verts.Count;
+					newTris [10] = 5 + verts.Count;
+					newTris [11] = 6 + verts.Count;
+					
+					// right wall
+					newTris [12] = 2 + verts.Count;
+					newTris [13] = 6 + verts.Count;
+					newTris [14] = 3 + verts.Count;
+					newTris [15] = 3 + verts.Count;
+					newTris [16] = 6 + verts.Count;
+					newTris [17] = 7 + verts.Count;
+					
+					// down wall
+					newTris [18] = 3 + verts.Count;
+					newTris [19] = 7 + verts.Count;
+					newTris [20] = 0 + verts.Count;
+					newTris [21] = 0 + verts.Count;
+					newTris [22] = 7 + verts.Count;
+					newTris [23] = 4 + verts.Count;
+
+					// Draw UVs...
+					Vector2[] newUVs = new Vector2[8];
+					//TODO fix the shaft UVs
+					// texture map 3 is shaft
+					newUVs[0] = textureMapCoords[3].topLeft;
+					newUVs[1] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,0);
+					newUVs[2] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,0);
+					newUVs[3] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,textureMapCoords[3].size.y);
+
+					newUVs[4] = textureMapCoords[3].topLeft + new Vector2(0,textureMapCoords[3].size.y);
+					newUVs[5] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,textureMapCoords[3].size.y);
+					newUVs[6] = textureMapCoords[3].topLeft;
+					newUVs[7] = textureMapCoords[3].topLeft + new Vector2(0,textureMapCoords[3].size.y);
+
+					// add these to the mesh
+					for (int n = 0; n < newVerts.Length; n++) {
+						verts.Add (newVerts [n]);
+					}
+					
+					for (int n = 0; n < newTris.Length; n++) {
+						tris.Add (newTris [n]);
+					}
+					
+					for (int n=0;n < newUVs.Length;n++){
+						newUVs[n].x = (newUVs[n].x/textureMapDimensions.x);
+						newUVs[n].y = 1-(newUVs[n].y/textureMapDimensions.y);
+						uvs.Add (newUVs[n]);
+					}
+				}
+				
+				#endregion
+
 				#region UPPER TILE
 				// get the upper tile pos
 				Vector2 upperTilePos = new Vector2 (worldXCoord, worldYCoord + 1);
@@ -380,7 +455,14 @@ public class MazeBuilder : MonoBehaviour
 					newTris [3] = 0 + verts.Count;
 					newTris [4] = 2 + verts.Count;
 					newTris [5] = 3 + verts.Count;
-					
+
+					Vector2[] newUVs = new Vector2[4];
+					// tex coord 2 is wall
+					newUVs[0] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,textureMapCoords[2].size.y);
+					newUVs[1] = textureMapCoords[2].topLeft + new Vector2(0,textureMapCoords[2].size.y);
+					newUVs[2] = textureMapCoords[2].topLeft;
+					newUVs[3] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,0);
+
 					// add these to the mesh
 					for (int n = 0; n < newVerts.Length; n++) {
 						verts.Add (newVerts [n]);
@@ -390,9 +472,10 @@ public class MazeBuilder : MonoBehaviour
 						tris.Add (newTris [n]);
 					}
 					
-					// add appropriate uvs for the vertices
-					for (int n = 0; n < newVerts.Length; n++) {
-						uvs.Add (new Vector2 ((newVerts [n].y), (newVerts [n].x)));
+					for (int n=0;n < newUVs.Length;n++){
+						newUVs[n].x = (newUVs[n].x/textureMapDimensions.x);
+						newUVs[n].y = 1-(newUVs[n].y/textureMapDimensions.y);
+						uvs.Add (newUVs[n]);
 					}
 				}
 				
@@ -444,7 +527,14 @@ public class MazeBuilder : MonoBehaviour
 					newTris [3] = 0 + verts.Count;
 					newTris [4] = 2 + verts.Count;
 					newTris [5] = 3 + verts.Count;
-					
+
+					Vector2[] newUVs = new Vector2[4];
+					// tex coord 2 is wall
+					newUVs[0] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,textureMapCoords[2].size.y);
+					newUVs[1] = textureMapCoords[2].topLeft + new Vector2(0,textureMapCoords[2].size.y);
+					newUVs[2] = textureMapCoords[2].topLeft;
+					newUVs[3] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,0);
+
 					// add these to the mesh
 					for (int n = 0; n < newVerts.Length; n++) {
 						verts.Add (newVerts [n]);
@@ -454,9 +544,10 @@ public class MazeBuilder : MonoBehaviour
 						tris.Add (newTris [n]);
 					}
 					
-					// add appropriate uvs for the vertices
-					for (int n = 0; n < newVerts.Length; n++) {
-						uvs.Add (new Vector2 ((newVerts [n].y), (newVerts [n].x)));
+					for (int n=0;n < newUVs.Length;n++){
+						newUVs[n].x = (newUVs[n].x/textureMapDimensions.x);
+						newUVs[n].y = 1-(newUVs[n].y/textureMapDimensions.y);
+						uvs.Add (newUVs[n]);
 					}
 				} 
 				
@@ -508,7 +599,16 @@ public class MazeBuilder : MonoBehaviour
 					newTris [3] = 0 + verts.Count;
 					newTris [4] = 2 + verts.Count;
 					newTris [5] = 3 + verts.Count;
-					
+
+
+					Vector2[] newUVs = new Vector2[4];
+					// tex coord 2 is wall
+					newUVs[0] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,textureMapCoords[2].size.y);
+					newUVs[1] = textureMapCoords[2].topLeft + new Vector2(0,textureMapCoords[2].size.y);
+					newUVs[2] = textureMapCoords[2].topLeft;
+					newUVs[3] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,0);
+
+
 					// add these to the mesh
 					for (int n = 0; n < newVerts.Length; n++) {
 						verts.Add (newVerts [n]);
@@ -518,9 +618,10 @@ public class MazeBuilder : MonoBehaviour
 						tris.Add (newTris [n]);
 					}
 					
-					// add appropriate uvs for the vertices
-					for (int n = 0; n < newVerts.Length; n++) {
-						uvs.Add (new Vector2 ((newVerts [n].y), (newVerts [n].z)));
+					for (int n=0;n < newUVs.Length;n++){
+						newUVs[n].x = (newUVs[n].x/textureMapDimensions.x);
+						newUVs[n].y = 1-(newUVs[n].y/textureMapDimensions.y);
+						uvs.Add (newUVs[n]);
 					}
 				} 
 				
@@ -573,7 +674,14 @@ public class MazeBuilder : MonoBehaviour
 					newTris [4] = 2 + verts.Count;
 					newTris [5] = 3 + verts.Count;
 					
-					
+
+					Vector2[] newUVs = new Vector2[4];
+					// tex coord 2 is wall
+					newUVs[0] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,textureMapCoords[2].size.y);
+					newUVs[1] = textureMapCoords[2].topLeft + new Vector2(0,textureMapCoords[2].size.y);
+					newUVs[2] = textureMapCoords[2].topLeft;
+					newUVs[3] = textureMapCoords[2].topLeft + new Vector2(textureMapCoords[2].size.x,0);
+
 					// add these to the mesh
 					for (int n = 0; n < newVerts.Length; n++) {
 						verts.Add (newVerts [n]);
@@ -583,9 +691,10 @@ public class MazeBuilder : MonoBehaviour
 						tris.Add (newTris [n]);
 					}
 					
-					// add appropriate uvs for the vertices
-					for (int n = 0; n < newVerts.Length; n++) {
-						uvs.Add (new Vector2 ((newVerts [n].y), (newVerts [n].z)));
+					for (int n=0;n < newUVs.Length;n++){
+						newUVs[n].x = (newUVs[n].x/textureMapDimensions.x);
+						newUVs[n].y = 1-(newUVs[n].y/textureMapDimensions.y);
+						uvs.Add (newUVs[n]);
 					}
 					
 				} 
@@ -597,7 +706,7 @@ public class MazeBuilder : MonoBehaviour
 
 		#endregion
 
-		
+
 		// finally write this mesh data back to the chunk, so it can be rendered
 		//RemoveDuplicateVertices(ref verts, ref tris, ref uvs);
 		chunk.chunkMesh.Clear ();
