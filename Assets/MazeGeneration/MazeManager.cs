@@ -43,6 +43,7 @@ public class MazeManager : MonoBehaviour
 	
 	static Vector2[] allDir;
 
+	public GameObject ladderPrefab;
 
 	// Use this for initialization
 	void Start ()
@@ -113,7 +114,8 @@ public class MazeManager : MonoBehaviour
 			maze [(int)startPos.x, (int)startPos.y].feature = MazeTileFeature.startTile;
 			maze [(int)endPos.x, (int)endPos.y].feature = MazeTileFeature.endTile;
 
-			// set the new starting position
+			// set the new starting position for the generator
+
 			// calculate the offset from the previous floor
 			if (n < (pyramidFloors.Length - 1)) {
 				Vector2 offsetPos = (floorSizes [n + 1] - floorSizes [n]) * 0.5f;
@@ -132,6 +134,45 @@ public class MazeManager : MonoBehaviour
 			yield return new WaitForEndOfFrame ();
 			// notify the maze builder that it can create this floor
 			MazeBuilder.singleton.CreateMazeWorld (pyramidFloors [n].floorCenter, pyramidFloors [n].floorData);
+		}
+
+		// Now place all the objects in the maze
+		for (int i=0; i<samplePyramidFloorSizes.Length; i++) {
+			CreateMazeObjects (i);
+		}
+	}
+
+	void CreateMazeObjects (int floorIndex) {
+		MazeTile[,] floorTiles = pyramidFloors [floorIndex].floorData;
+
+		for(int i=0;i<floorTiles.GetLength(0);i++){
+			for(int j=0;j<floorTiles.GetLength(1);j++){
+			
+				// calculate the exact world position of this tile
+				// TODO fix this.
+				// start with the base numbers for the position
+				// the tile coordinates in x & z
+				Vector3 tileWorldFloorPos = new Vector3(i,0,j);
+				// scale them up to be the actual tile sizes
+				tileWorldFloorPos.x *= MazeBuilder.singleton.tileWidth;
+				tileWorldFloorPos.z *= MazeBuilder.singleton.tileWidth;
+
+				// now offset them from the bottom left hand corner
+				Vector3 leftCornerPos = new Vector3 (floorTiles.GetLength(0) / 2, 0, floorTiles.GetLength(1) / 2);
+				// scale this up based on the tile width
+				leftCornerPos *= MazeBuilder.singleton.tileWidth;
+				// offset this from the center
+				leftCornerPos = pyramidFloors[floorIndex].floorCenter - leftCornerPos;
+
+				// now add each tiles position to this
+				tileWorldFloorPos +=leftCornerPos;
+
+				// build a ladder here if it is the start
+				if(floorTiles[i,j].feature == MazeTileFeature.startTile){
+					Instantiate(ladderPrefab,tileWorldFloorPos,Quaternion.identity);
+				}
+			
+			}
 		}
 	}
 
