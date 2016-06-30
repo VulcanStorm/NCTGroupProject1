@@ -541,7 +541,7 @@ namespace mNetworkLibrary
 					BinaryFormatter formatter = new BinaryFormatter ();
 					
 					formatter.Serialize (stream, _dataToSend);
-					//Debug.Log ("stream length before sending: " + stream.Length);
+					Debug.Log ("stream length before sending: " + stream.Length);
 					localbuffer = new byte[stream.Length];
 					stream.Seek(0,SeekOrigin.Begin);
 					stream.Read (localbuffer, 0, (int)stream.Length);
@@ -563,7 +563,7 @@ namespace mNetworkLibrary
 				BinaryFormatter formatter = new BinaryFormatter ();
 
 				formatter.Serialize (stream, _dataToSend);
-				//Debug.Log ("stream length before sending: " + stream.Length);
+				Debug.Log ("stream length before sending: " + stream.Length);
 				buffer = new byte[stream.Length];
 				stream.Seek(0,SeekOrigin.Begin);
 				stream.Read (buffer, 0, (int)stream.Length);

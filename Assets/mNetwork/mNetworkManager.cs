@@ -338,7 +338,7 @@ namespace mNetworkLibrary
 		
 			try {
 
-				//Debug.Log ("raw data array length: "+rawData.Length);
+				Debug.Log ("actual data array length: "+rawDataLength);
 				//Debug.Log ("actual data length: "+rawDataLength);
 				using (Stream stream = new MemoryStream (rawData,0,rawDataLength)) {
 
@@ -351,6 +351,7 @@ namespace mNetworkLibrary
 
 					// read the message and determine the required action
 
+					//Debug.Log ("raw data array length: "+rawData.Length);
 					// check if it was recieved in the client socket
 					if (socketID == mNetwork.clientSocketId) {
 						// process this like a client

@@ -19,6 +19,7 @@ public class TestFormatter : MonoBehaviour {
 			BinaryFormatter formatter = new BinaryFormatter();
 			formatter.Serialize(stream,"MEGA TEST STRING RAAAAWRRRR");
 			data = new byte[stream.Length];
+			Debug.Log("MEGA TEST "+stream.Length);
 			stream.Seek(0,SeekOrigin.Begin);
 			stream.Read(data,0,(int)stream.Length);
 		}

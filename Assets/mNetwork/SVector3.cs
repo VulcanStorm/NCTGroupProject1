@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Runtime.Serialization;
 
 [System.Serializable]
-public struct SVector3 {
+public struct SVector3 : ISerializable {
 
 	// components of the vector
 	public float x;
@@ -38,4 +39,21 @@ public struct SVector3 {
 	public Vector3 Deserialise () {
 		return new Vector3(x,y,z);
 	}
+
+	#region ISerializable implementation
+
+	void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context)
+	{
+		info.AddValue ("x", x, typeof(float));
+		info.AddValue ("y", y, typeof(float));
+		info.AddValue ("z", z, typeof(float));
+	}
+	// required constructor to get data back
+	public SVector3(SerializationInfo info, StreamingContext context){
+		x = info.GetSingle ("x");
+		y = info.GetSingle ("y");
+		z = info.GetSingle ("z");
+	}
+
+	#endregion
 }
