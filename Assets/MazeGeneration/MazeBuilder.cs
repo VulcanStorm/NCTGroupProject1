@@ -24,6 +24,8 @@ public class MazeBuilder : MonoBehaviour
 
 	MazeTile[,] mazeToGen;
 
+
+
 	// Use this for initialization
 	void Start ()
 	{
@@ -159,7 +161,7 @@ public class MazeBuilder : MonoBehaviour
 				Vector3 tilePos = new Vector3 (i - (chunkSize / 2), 0, j - (chunkSize / 2));
 				tilePos *= tileWidth;
 
-				// check if this is a wall tile, if so, add the wall height
+				// check if this is a floor tile
 				if (mazeToGen [worldXCoord, worldYCoord].tileType == MazeTileType.floor) {
 
 					Vector3[] newVerts = new Vector3[0];
@@ -382,13 +384,13 @@ public class MazeBuilder : MonoBehaviour
 					// texture map 3 is shaft
 					newUVs[0] = textureMapCoords[3].topLeft;
 					newUVs[1] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,0);
-					newUVs[2] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,0);
-					newUVs[3] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,textureMapCoords[3].size.y);
+					newUVs[2] = textureMapCoords[3].topLeft;
+					newUVs[3] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,0);
 
 					newUVs[4] = textureMapCoords[3].topLeft + new Vector2(0,textureMapCoords[3].size.y);
 					newUVs[5] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,textureMapCoords[3].size.y);
-					newUVs[6] = textureMapCoords[3].topLeft;
-					newUVs[7] = textureMapCoords[3].topLeft + new Vector2(0,textureMapCoords[3].size.y);
+					newUVs[6] = textureMapCoords[3].topLeft + new Vector2(0,textureMapCoords[3].size.y);
+					newUVs[7] = textureMapCoords[3].topLeft + new Vector2(textureMapCoords[3].size.x,textureMapCoords[3].size.y);
 
 					// add these to the mesh
 					for (int n = 0; n < newVerts.Length; n++) {

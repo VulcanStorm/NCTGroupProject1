@@ -503,7 +503,7 @@ namespace mNetworkLibrary
 		}
 
 		/// <summary>
-		/// Sent via RPC from the server. Used to set the client port on a remote machine.
+		/// Sent via RPC from the server. Used to set the client port on a remote machine. Remove this as is a security risk.
 		/// </summary>
 		/// <param name="port">Port.</param>
 		[mNetworkRPC]
@@ -535,30 +535,39 @@ namespace mNetworkLibrary
 			
 				Debug.LogWarning ("Not connected, so the RPC will only be local");
 				// send it locally instead
-				byte[] localbuffer = new byte[1024];
-				using (Stream stream = new MemoryStream (localbuffer)) {
-				
+				byte[] localbuffer;
+				using (Stream stream = new MemoryStream ()) {
+					
 					BinaryFormatter formatter = new BinaryFormatter ();
+					
 					formatter.Serialize (stream, _dataToSend);
-					// always process this like a client
-					mNetworkManager.ProcessNonDelegateRPC (ref localbuffer, clientSocketId, -1, sendChannelID);
+					Debug.Log ("stream length before sending: " + stream.Length);
+					localbuffer = new byte[stream.Length];
+					stream.Seek(0,SeekOrigin.Begin);
+					stream.Read (localbuffer, 0, (int)stream.Length);
+					//Debug.Log ("buffer length before sending: " + buffer.Length);
+					
+					
 				}
+				// always process this like a client
+				mNetworkManager.ProcessNonDelegateRPC (ref localbuffer, localbuffer.Length,clientSocketId, -1, sendChannelID);
 				return;
 			}
 		
 			byte error;
-			byte[] buffer = new byte[1024];
+			byte[] buffer;
 
 			// using so the stream will be disposed of afterwards
-			using (Stream stream = new MemoryStream (buffer)) {
+			using (Stream stream = new MemoryStream ()) {
 		
 				BinaryFormatter formatter = new BinaryFormatter ();
 
 				formatter.Serialize (stream, _dataToSend);
-				//Debug.Log ("stream length " + stream.Length);
-				//buffer = new byte[stream.Length];
-				//stream.Read (buffer, 0, (int)stream.Length);
-
+				Debug.Log ("stream length before sending: " + stream.Length);
+				buffer = new byte[stream.Length];
+				stream.Seek(0,SeekOrigin.Begin);
+				stream.Read (buffer, 0, (int)stream.Length);
+				//Debug.Log ("buffer length before sending: " + buffer.Length);
 
 
 			}
@@ -571,7 +580,7 @@ namespace mNetworkLibrary
 		// what to do...
 		else {
 				// we're a dedicated server... so relay this to the correct client since we can't send this to ourselves
-				mNetworkManager.ProcessNonDelegateRPC (ref buffer, serverSocketId, -1, sendChannelID);
+				mNetworkManager.ProcessNonDelegateRPC (ref buffer, buffer.Length, serverSocketId, -1, sendChannelID);
 			}
 		}
 
@@ -666,18 +675,23 @@ namespace mNetworkLibrary
 				return;
 			}
 		
+			// send it locally instead
 			byte error;
-			byte[] buffer = new byte[1024];
-			// using so the stream will be disposed of afterwards
-			using (Stream stream = new MemoryStream (buffer)) {
-			
+			byte[] buffer;
+			using (Stream stream = new MemoryStream()) {
+				
 				BinaryFormatter formatter = new BinaryFormatter ();
 				formatter.Serialize (stream, dataToSend);
-			
+				//changes
+				//Debug.Log ("stream length before sending: " + stream.Length);
+				buffer = new byte[stream.Length];
+				stream.Seek(0,SeekOrigin.Begin);
+				stream.Read (buffer,0,(int)stream.Length);
+				//Debug.Log ("buffer length before sending: " + buffer.Length);
 			}
 
-			int bufferSize = 1024;
-			NetworkTransport.Send (serverSocketId, _connectionID, _channelID, buffer, bufferSize, out error);
+
+			NetworkTransport.Send (serverSocketId, _connectionID, _channelID, buffer, buffer.Length, out error);
 			CheckForNetworkError (error);
 		}
 
@@ -694,15 +708,19 @@ namespace mNetworkLibrary
 
 				// send it locally instead
 				byte error;
-				byte[] localbuffer = new byte[1024];
-				using (Stream stream = new MemoryStream (localbuffer)) {
+				byte[] localbuffer;
+				using (Stream stream = new MemoryStream()) {
 					
 					BinaryFormatter formatter = new BinaryFormatter ();
 					formatter.Serialize (stream, _msg);
-				
+					//changes
+					localbuffer = new byte[stream.Length];
+					stream.Seek(0,SeekOrigin.Begin);
+					stream.Read (localbuffer,0,(int)stream.Length);
+					
 				}
 				// relay this to the correct destination
-				mNetworkManager.ProcessNonDelegateRPC (ref localbuffer, serverSocketId, -1, _sendChannelID);
+				mNetworkManager.ProcessNonDelegateRPC (ref localbuffer, localbuffer.Length,serverSocketId, -1, _sendChannelID);
 			
 			} else {
 				Debug.LogWarning ("Not connected, RPC not sent");
@@ -723,11 +741,17 @@ namespace mNetworkLibrary
 			
 				// send it locally instead
 				byte error;
-				byte[] localbuffer = new byte[1024];
-				using (Stream stream = new MemoryStream (localbuffer)) {
+				byte[] localbuffer;
+				using (Stream stream = new MemoryStream()) {
 				
 					BinaryFormatter formatter = new BinaryFormatter ();
 					formatter.Serialize (stream, _msg);
+					//changes
+					//Debug.Log ("stream length before sending: " + stream.Length);
+					localbuffer = new byte[stream.Length];
+					stream.Seek(0,SeekOrigin.Begin);
+					stream.Read (localbuffer,0,(int)stream.Length);
+					//Debug.Log ("buffer length before sending: " + localbuffer.Length);
 				
 				}
 				// relay this to the correct destination
@@ -780,6 +804,7 @@ namespace mNetworkLibrary
 				// recieve the event
 				NetworkEventType recNetworkEvent = NetworkTransport.Receive (out recSocketId, out recConnectionId, 
 					                                   out recChannelId, recBuffer, bufferSize, out dataSize, out error);
+				//Debug.Log ("Data Size: "+dataSize);
 				// check for an error
 				if (CheckForNetworkError (error)) {
 					NetworkError err = (NetworkError)error;
@@ -891,7 +916,7 @@ namespace mNetworkLibrary
 						//Debug.Log ("WOOT! WE GOT DATA!");
 					
 					// send the network manager the data to process
-						mNetworkManager.ProcessNonDelegateRPC (ref recBuffer, recSocketId, recConnectionId, recChannelId);
+						mNetworkManager.ProcessNonDelegateRPC (ref recBuffer, dataSize, recSocketId, recConnectionId, recChannelId);
 					
 						break;
 					

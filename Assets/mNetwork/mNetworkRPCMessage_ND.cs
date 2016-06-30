@@ -1,11 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Runtime.Serialization;
 
 namespace mNetworkLibrary
 {
 
 	[System.Serializable]
-	public struct mNetworkRPCMessage_ND
+	public struct mNetworkRPCMessage_ND : ISerializable
 	{
 
 		public ushort targetNetId;
@@ -67,6 +68,34 @@ namespace mNetworkLibrary
 			targetMethodId = methodId;
 			data = inData;
 		}
+
+		#region ISerializable implementation
+
+		void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context)
+		{
+			info.AddValue ("a", targetNetId, typeof(ushort));
+			info.AddValue ("b", networkPlayer, typeof(mNetworkPlayer));
+			//info.AddValue ("z", networkPlayer.playerNo, typeof(byte));
+			//info.AddValue ("y", networkPlayer.isActive, typeof(bool));
+			info.AddValue ("c", (byte)rpcMode, typeof(byte));
+			info.AddValue ("d", (byte)targetIdType, typeof(byte));
+			info.AddValue ("e", targetMethodId, typeof(ushort));
+			info.AddValue ("f", data, typeof(object[]));
+		}
+
+		public mNetworkRPCMessage_ND (SerializationInfo info, StreamingContext context){
+			targetNetId = info.GetUInt16 ("a");
+			networkPlayer = (mNetworkPlayer)info.GetValue ("b", typeof(mNetworkPlayer));
+			//bool a = info.GetBoolean ("y");
+			//byte p = info.GetByte ("z");
+			//networkPlayer = new mNetworkPlayer (p, a);
+			rpcMode = (mNetworkRPCMode)info.GetByte ("c");
+			targetIdType = (mNetworkIDType)info.GetByte ("d");
+			targetMethodId = info.GetUInt16 ("e");
+			data = (object[])info.GetValue("f",typeof(object[]));
+		}
+
+		#endregion
 	}
 
 }

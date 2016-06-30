@@ -45,7 +45,8 @@ namespace mNetworkLibrary
 		{
 			if (isCreated == false) {
 				isCreated = true;
-			
+				// changes
+				//Environment.SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
 				gameNetworkIDs = new mNetworkIDData[256];
 				sceneNetworkIDs = new mNetworkIDData[64];
 				GetSceneNetIDs ();
@@ -332,18 +333,25 @@ namespace mNetworkLibrary
 		/// <param name="rawData">The Raw byte array data.</param>
 		/// <param name="socketID">The socket that this RPC was recieved in. -1 if local.</param>
 		/// <param name="connectionID">The connection ID that this message came in on.</param> 
-		public static void ProcessNonDelegateRPC (ref byte[] rawData, int socketID, int connectionID, int channelID)
+		public static void ProcessNonDelegateRPC (ref byte[] rawData, int rawDataLength, int socketID, int connectionID, int channelID)
 		{
 		
 			try {
-			
-				using (Stream stream = new MemoryStream (rawData)) {
+
+				Debug.Log ("actual data array length: "+rawDataLength);
+				//Debug.Log ("actual data length: "+rawDataLength);
+				using (Stream stream = new MemoryStream (rawData,0,rawDataLength)) {
+
+					//Debug.Log ("stream length: "+stream.Length);
 					//deserialise the data
 					BinaryFormatter formatter = new BinaryFormatter ();
 
+
 					mNetworkRPCMessage_ND msg = (mNetworkRPCMessage_ND)formatter.Deserialize (stream);
+
 					// read the message and determine the required action
 
+					//Debug.Log ("raw data array length: "+rawData.Length);
 					// check if it was recieved in the client socket
 					if (socketID == mNetwork.clientSocketId) {
 						// process this like a client

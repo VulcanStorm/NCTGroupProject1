@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Runtime.Serialization;
 
 [System.Serializable]
-public struct SQuaternion {
+public struct SQuaternion : ISerializable{
 
 	// components of the quaternion
 	public float x;
@@ -44,5 +45,23 @@ public struct SQuaternion {
 	public Quaternion Deserialise (){
 		return new Quaternion(x,y,z,w);
 	}
+
+
 	
+	#region ISerializable implementation
+	void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context)
+	{
+		info.AddValue ("x", x, typeof(float));
+		info.AddValue ("y", y, typeof(float));
+		info.AddValue ("z", z, typeof(float));
+		info.AddValue ("w", w, typeof(float));
+	}
+
+	public SQuaternion(SerializationInfo info, StreamingContext context){
+		x = info.GetSingle ("x");
+		y = info.GetSingle ("y");
+		z = info.GetSingle ("z");
+		w = info.GetSingle ("w");
+	}
+	#endregion
 }

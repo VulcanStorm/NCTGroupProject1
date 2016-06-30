@@ -69,8 +69,8 @@ public class PlayerManager : mNetworkBehaviour
 	public void REQ_UpdatePlayerGameData (mNetworkPlayer pl, int index)
 	{
 		Debug.Log ("request get player data received");
-		Debug.Log (pl.playerNo);
-		Debug.Log (pl.isActive);
+		//Debug.Log (pl.playerNo);
+		//Debug.Log (pl.isActive);
 		thisNetworkID.SendRPC ("REC_UpdatePlayerGameData", pl, mNetwork.seqReliableChannelId, index, playerDataList [index].gameData);
 	}
 
